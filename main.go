@@ -7,10 +7,10 @@ import (
 
 var (
 	DefaultNumberOfEpochs        = 100
-	DefaultNumberOfInputs        = 100
-	DefaultNumberOfHiddenLayers  = 100
-	DefaultNumberOfHiddenNeurons = 100
-	DefaultNumberOfOutputs       = 100
+	DefaultNumberOfInputs        = 768
+	DefaultNumberOfHiddenLayers  = 1
+	DefaultNumberOfHiddenNeurons = 128
+	DefaultNumberOfOutputs       = 1
 )
 
 func main() {

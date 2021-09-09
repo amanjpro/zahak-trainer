@@ -46,10 +46,12 @@ func CreateNetwork(topology Topology) (net Network) {
 	net.Weights = make([]*mat.Dense, topology.HiddenLayers)
 	net.Biases = make([]*mat.Dense, topology.HiddenLayers)
 
+	rows := int(topology.HiddenNeurons)
+	cols := int(topology.Inputs)
 	for i := uint16(0); i < topology.HiddenLayers; i++ {
-		net.Neurons[i] = mat.NewDense(int(topology.HiddenNeurons), int(topology.Inputs), randomArray(topology.Inputs*topology.HiddenNeurons, float64(topology.Inputs)))
-		net.Weights[i] = mat.NewDense(int(topology.HiddenNeurons), int(topology.Inputs), randomArray(topology.Inputs*topology.HiddenNeurons, float64(topology.Inputs)))
-		net.Biases[i] = mat.NewDense(int(topology.HiddenNeurons), int(topology.Inputs), randomArray(topology.Inputs*topology.HiddenNeurons, float64(topology.Inputs)))
+		net.Neurons[i] = mat.NewDense(rows, cols, randomArray(cols*rows, float64(topology.Inputs)))
+		net.Weights[i] = mat.NewDense(rows, cols, randomArray(cols*rows, float64(topology.Inputs)))
+		net.Biases[i] = mat.NewDense(rows, cols, randomArray(cols*rows, float64(topology.Inputs)))
 	}
 
 	return
@@ -185,8 +187,11 @@ func Load(path string) Network {
 	net.Weights = make([]*mat.Dense, topology.HiddenLayers)
 	net.Biases = make([]*mat.Dense, topology.HiddenLayers)
 
+	rows := int(topology.HiddenNeurons)
+	cols := int(topology.Inputs)
+
 	for i := uint16(0); i < topology.HiddenLayers; i++ {
-		data := make([]float64, topology.Inputs*topology.HiddenNeurons)
+		data := make([]float64, rows*cols)
 		for j := 0; j < len(data); j++ {
 			_, err := io.ReadFull(f, buf)
 			if err != nil {
@@ -194,11 +199,11 @@ func Load(path string) Network {
 			}
 			data[j] = math.Float64frombits(binary.BigEndian.Uint64(buf))
 		}
-		net.Neurons[i] = mat.NewDense(int(topology.HiddenNeurons), int(topology.Inputs), data)
+		net.Neurons[i] = mat.NewDense(rows, cols, data)
 	}
 
 	for i := uint16(0); i < topology.HiddenLayers; i++ {
-		data := make([]float64, topology.Inputs*topology.HiddenNeurons)
+		data := make([]float64, rows*cols)
 		for j := 0; j < len(data); j++ {
 			_, err := io.ReadFull(f, buf)
 			if err != nil {
@@ -206,11 +211,11 @@ func Load(path string) Network {
 			}
 			data[j] = math.Float64frombits(binary.BigEndian.Uint64(buf))
 		}
-		net.Weights[i] = mat.NewDense(int(topology.HiddenNeurons), int(topology.Inputs), data)
+		net.Weights[i] = mat.NewDense(rows, cols, data)
 	}
 
 	for i := uint16(0); i < topology.HiddenLayers; i++ {
-		data := make([]float64, topology.Inputs*topology.HiddenNeurons)
+		data := make([]float64, rows*cols)
 		for j := 0; j < len(data); j++ {
 			_, err := io.ReadFull(f, buf)
 			if err != nil {
@@ -218,21 +223,21 @@ func Load(path string) Network {
 			}
 			data[j] = math.Float64frombits(binary.BigEndian.Uint64(buf))
 		}
-		net.Biases[i] = mat.NewDense(int(topology.HiddenNeurons), int(topology.Inputs), data)
+		net.Biases[i] = mat.NewDense(rows, cols, data)
 	}
 	return net
 }
 
 // Helper functions
 // randomly generate a float64 array
-func randomArray(size uint16, v float64) (data []float64) {
+func randomArray(size int, v float64) (data []float64) {
 	dist := distuv.Uniform{
 		Min: -1 / math.Sqrt(v),
 		Max: 1 / math.Sqrt(v),
 	}
 
 	data = make([]float64, size)
-	for i := uint16(0); i < size; i++ {
+	for i := 0; i < size; i++ {
 		// data[i] = rand.NormFloat64() * math.Pow(v, -0.5)
 		data[i] = dist.Rand()
 	}
