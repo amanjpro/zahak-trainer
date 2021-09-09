@@ -155,10 +155,10 @@ func pieceFromName(name rune) Piece {
 	return NoPiece
 }
 
-func FromFen(fen string) *Position {
+func FromFen(fen string) Position {
 	words := strings.Split(fen, " ")
 	if len(words) != 6 {
-		panic(fmt.Sprintf("Expected 6 parts of the FEN, got %s", fen))
+		panic(fmt.Sprintf("Expected 6 parts of the FEN, got %s\n", fen))
 	}
 
 	pos := Position{}
@@ -180,12 +180,12 @@ func FromFen(fen string) *Position {
 			pos.AddPiece(boardIndex, p)
 			boardIndex++
 		} else {
-			panic(fmt.Sprintf("Invalid FEN notation %s, boardIndex == %d, parsing %s",
+			panic(fmt.Sprintf("Invalid FEN notation %s, boardIndex == %d, parsing %s\n",
 				fen, boardIndex, string(ch)))
 		}
 	}
 
-	return nil
+	return pos
 }
 
 func (p *Position) AddPiece(sq Square, piece Piece) {

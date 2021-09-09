@@ -1,7 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"math"
+	"strconv"
+	"strings"
 )
 
 type (
@@ -15,6 +18,12 @@ type (
 		Value        float64
 		FirstMoment  float64
 		SecondMoment float64
+	}
+
+	Data struct {
+		Position Position
+		Score    float64
+		Outcome  float64
 	}
 )
 
@@ -89,4 +98,37 @@ func (grad *Gradient) ApplyGradient(parameter float64) float64 {
 	parameter -= grad.CalculateGradient()
 	grad.Value = 0
 	return parameter
+}
+
+func ParseLine(line string) Data {
+	parts := strings.Split(line, ";")
+	if len(parts) != 4 {
+		panic(fmt.Sprintf("Bad line %s\n", line))
+	}
+
+	pos := FromFen(parts[0])
+
+	scorePart := strings.Split(parts[1], ":")
+	if len(scorePart) != 2 {
+		panic(fmt.Sprintf("Bad line %s\n", line))
+	}
+	score, err := strconv.ParseFloat(scorePart[1], 64)
+	if err != nil {
+		panic(fmt.Sprintf("Bad line %s\n", line))
+	}
+
+	outcomePart := strings.Split(parts[3], ":")
+	if len(outcomePart) != 2 {
+		panic(fmt.Sprintf("Bad line %s\n", line))
+	}
+	outcome, err := strconv.ParseFloat(outcomePart[1], 64)
+	if err != nil {
+		panic(fmt.Sprintf("Bad line %s\n", line))
+	}
+
+	return Data{
+		Position: pos,
+		Score:    score,
+		Outcome:  outcome,
+	}
 }
