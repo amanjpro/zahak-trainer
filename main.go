@@ -3,21 +3,21 @@ package main
 import (
 	"flag"
 	"fmt"
+	"strconv"
+	"strings"
 )
 
 var (
 	DefaultNumberOfEpochs        = 100
 	DefaultNumberOfInputs        = 768
-	DefaultNumberOfHiddenLayers  = 1
-	DefaultNumberOfHiddenNeurons = 128
+	DefaultNumberOfHiddenNeurons = "128"
 	DefaultNumberOfOutputs       = 1
 )
 
 func main() {
 	epochs := flag.Int("epochs", DefaultNumberOfEpochs, "Number of epochs")
 	inputs := flag.Int("inputs", DefaultNumberOfInputs, "Number of inputs")
-	layers := flag.Int("layers", DefaultNumberOfHiddenLayers, "Number of hidden layers")
-	neurons := flag.Int("neurons", DefaultNumberOfHiddenNeurons, "Number of hidden neurons")
+	neurons := flag.String("hiddens", DefaultNumberOfHiddenNeurons, "Number of hidden neurons, for multi-layer you can send comma separated numbers")
 	outputs := flag.Int("outputs", DefaultNumberOfOutputs, "Number of outputs")
 
 	checkpointPath := flag.String("from-checkpoint", "", "Start from a known checkpoint")
@@ -27,7 +27,20 @@ func main() {
 
 	flag.Parse()
 
-	topology := NewTopology(uint16(*inputs), uint16(*outputs), uint16(*layers), uint16(*neurons))
+	words := strings.Split(*neurons, ",")
+	if len(words) < 1 {
+		panic("At least one layer of hidden neurons are required")
+	}
+	hiddenNeurons := make([]uint16, len(words))
+	for i, w := range words {
+		parsed, err := strconv.Atoi(w)
+		if err != nil {
+			panic(err)
+		}
+		hiddenNeurons[i] = uint16(parsed)
+	}
+
+	topology := NewTopology(uint16(*inputs), uint16(*outputs), hiddenNeurons)
 	network := CreateNetwork(topology)
 	network.Save("/tmp/net.nnue")
 	network = Load("/tmp/net.nnue")

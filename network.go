@@ -6,7 +6,6 @@ import (
 	"math"
 	"os"
 
-	"gonum.org/v1/gonum/mat"
 	"gonum.org/v1/gonum/stat/distuv"
 )
 
@@ -15,23 +14,21 @@ type (
 	Topology struct {
 		Inputs        uint16
 		Outputs       uint16
-		HiddenLayers  uint16
-		HiddenNeurons uint16
+		HiddenNeurons []uint16
 	}
 
 	Network struct {
 		Topology Topology
-		Neurons  []*mat.Dense
-		Weights  []*mat.Dense
-		Biases   []*mat.Dense
+		Neurons  [][]float32
+		Weights  [][]float32
+		Biases   [][]float32
 	}
 )
 
-func NewTopology(inputs, outputs, hiddenLayers, hiddenNeurons uint16) Topology {
+func NewTopology(inputs, outputs uint16, hiddenNeurons []uint16) Topology {
 	return Topology{
 		Inputs:        inputs,
 		Outputs:       outputs,
-		HiddenLayers:  hiddenLayers,
 		HiddenNeurons: hiddenNeurons,
 	}
 }
@@ -42,16 +39,17 @@ func CreateNetwork(topology Topology) (net Network) {
 		Topology: topology,
 	}
 
-	net.Neurons = make([]*mat.Dense, topology.HiddenLayers)
-	net.Weights = make([]*mat.Dense, topology.HiddenLayers)
-	net.Biases = make([]*mat.Dense, topology.HiddenLayers)
+	net.Neurons = make([][]float32, len(topology.HiddenNeurons))
+	net.Weights = make([][]float32, len(topology.HiddenNeurons))
+	net.Biases = make([][]float32, len(topology.HiddenNeurons))
 
-	rows := int(topology.HiddenNeurons)
 	cols := int(topology.Inputs)
-	for i := uint16(0); i < topology.HiddenLayers; i++ {
-		net.Neurons[i] = mat.NewDense(rows, cols, randomArray(cols*rows, float64(topology.Inputs)))
-		net.Weights[i] = mat.NewDense(rows, cols, randomArray(cols*rows, float64(topology.Inputs)))
-		net.Biases[i] = mat.NewDense(rows, cols, randomArray(cols*rows, float64(topology.Inputs)))
+	for i := 0; i < len(topology.HiddenNeurons); i++ {
+		rows := int(topology.HiddenNeurons[i])
+		net.Neurons[i] = randomArray(cols*rows, float32(topology.Inputs))
+		net.Weights[i] = randomArray(cols*rows, float32(topology.Inputs))
+		net.Biases[i] = randomArray(cols*rows, float32(topology.Inputs))
+		cols = rows
 	}
 
 	return
@@ -74,18 +72,17 @@ func (net *Network) CreateInputs(position *Position) []uint16 {
 
 // Binary specification for the NNUE file:
 // - All the data is stored in big-endian layout
-// - All the matrices are written in row-major
+// - All the matrices are written in column-major
 // - The magic numbers:
 //   - 66 (which is the ASCII code for B), uint8
 //   - 90 (which is the ASCII code for Z), uint8
 // - 1 The current version number, uint8
 // - uint16 number to represent the number of inputs (let's call it I)
 // - uint16 number to represent the number of hidden layers (let's call it L)
-// - uint16 number to represent the number of neurons in each of the hidden layers (let's call it N)
+// - L uint16 to each the size of each hidden layer (let's call it NN)
 // - uint16 number to represent the number of outputs
-// - Followed by as L * (N * I) float64 numbers, each chunk of (N * I) will represent a hidden layer neurons.
-// - Followed by as L * (N * I) float64 numbers, each chunk of (N * I) will represent a hidden layer weights.
-// - Followed by as L * (N * I) float64 numbers, each chunk of (N * I) will represent a hidden layer biases.
+// - Followed float32 numbers, which represent all the hidden weights, stored one after the other
+// - Followed float32 numbers, which represent all the hidden biases, stored one after the other
 func (n *Network) Save(file string) {
 	f, err := os.Create(file)
 	if err != nil {
@@ -101,32 +98,24 @@ func (n *Network) Save(file string) {
 	}
 
 	// Write Topology
-	buf = make([]byte, 8)
+	buf = make([]byte, 6+2*len(n.Topology.HiddenNeurons))
 	binary.BigEndian.PutUint16(buf[0:], n.Topology.Inputs)
-	binary.BigEndian.PutUint16(buf[2:], n.Topology.HiddenLayers)
-	binary.BigEndian.PutUint16(buf[4:], n.Topology.HiddenNeurons)
-	binary.BigEndian.PutUint16(buf[6:], n.Topology.Outputs)
+	binary.BigEndian.PutUint16(buf[2:], uint16(len(n.Topology.HiddenNeurons)))
+	i := 0
+	for ; i < len(n.Topology.HiddenNeurons); i++ {
+		binary.BigEndian.PutUint16(buf[4+2*i:], n.Topology.HiddenNeurons[i])
+	}
+	binary.BigEndian.PutUint16(buf[4+2*i:], n.Topology.Outputs)
 	_, err = f.Write(buf)
 	if err != nil {
 		panic(err)
 	}
 
-	// Write hidden neurons
-	for i := uint16(0); i < n.Topology.HiddenLayers; i++ {
-		neurons := n.Neurons[i].RawMatrix().Data
-		for j := 0; j < len(neurons); j++ {
-			binary.BigEndian.PutUint64(buf, math.Float64bits(neurons[j]))
-			_, err := f.Write(buf)
-			if err != nil {
-				panic(err)
-			}
-		}
-	}
-
-	for i := uint16(0); i < n.Topology.HiddenLayers; i++ {
-		weights := n.Weights[i].RawMatrix().Data
+	buf = make([]byte, 4)
+	for i := 0; i < len(n.Topology.HiddenNeurons); i++ {
+		weights := n.Weights[i]
 		for j := 0; j < len(weights); j++ {
-			binary.BigEndian.PutUint64(buf, math.Float64bits(weights[j]))
+			binary.BigEndian.PutUint32(buf, math.Float32bits(weights[j]))
 			_, err := f.Write(buf)
 			if err != nil {
 				panic(err)
@@ -134,10 +123,10 @@ func (n *Network) Save(file string) {
 		}
 	}
 
-	for i := uint16(0); i < n.Topology.HiddenLayers; i++ {
-		biases := n.Biases[i].RawMatrix().Data
+	for i := 0; i < len(n.Topology.HiddenNeurons); i++ {
+		biases := n.Biases[i]
 		for j := 0; j < len(biases); j++ {
-			binary.BigEndian.PutUint64(buf, math.Float64bits(biases[j]))
+			binary.BigEndian.PutUint32(buf, math.Float32bits(biases[j]))
 			_, err := f.Write(buf)
 			if err != nil {
 				panic(err)
@@ -168,78 +157,82 @@ func Load(path string) Network {
 	}
 
 	// Read Topology
-	buf = make([]byte, 8)
+	buf = make([]byte, 4)
 	_, err = io.ReadFull(f, buf)
 	if err != nil {
 		panic(err)
 	}
 	inputs := binary.BigEndian.Uint16(buf[:2])
 	layers := binary.BigEndian.Uint16(buf[2:4])
-	neurons := binary.BigEndian.Uint16(buf[4:6])
-	outputs := binary.BigEndian.Uint16(buf[6:])
 
-	topology := NewTopology(inputs, outputs, layers, neurons)
+	buf = make([]byte, 2+2*layers)
+	_, err = io.ReadFull(f, buf)
+	if err != nil {
+		panic(err)
+	}
+	neurons := make([]uint16, layers)
+	i := uint16(0)
+	for ; i < layers; i++ {
+		neurons[i] = binary.BigEndian.Uint16(buf[i*2 : (i+1)*2])
+	}
+	outputs := binary.BigEndian.Uint16(buf[i*2:])
+
+	topology := NewTopology(inputs, outputs, neurons)
+
 	net := Network{
 		Topology: topology,
 	}
 
-	net.Neurons = make([]*mat.Dense, topology.HiddenLayers)
-	net.Weights = make([]*mat.Dense, topology.HiddenLayers)
-	net.Biases = make([]*mat.Dense, topology.HiddenLayers)
+	net.Neurons = make([][]float32, len(topology.HiddenNeurons))
+	net.Weights = make([][]float32, len(topology.HiddenNeurons))
+	net.Biases = make([][]float32, len(topology.HiddenNeurons))
 
-	rows := int(topology.HiddenNeurons)
+	buf = make([]byte, 4)
 	cols := int(topology.Inputs)
-
-	for i := uint16(0); i < topology.HiddenLayers; i++ {
-		data := make([]float64, rows*cols)
+	for i := 0; i < len(topology.HiddenNeurons); i++ {
+		rows := int(neurons[i])
+		data := make([]float32, rows*cols)
 		for j := 0; j < len(data); j++ {
 			_, err := io.ReadFull(f, buf)
 			if err != nil {
 				panic(err)
 			}
-			data[j] = math.Float64frombits(binary.BigEndian.Uint64(buf))
+			data[j] = math.Float32frombits(binary.BigEndian.Uint32(buf))
 		}
-		net.Neurons[i] = mat.NewDense(rows, cols, data)
+		net.Neurons[i] = randomArray(rows*cols, float32(topology.Inputs))
+		net.Weights[i] = data
+		cols = rows
 	}
 
-	for i := uint16(0); i < topology.HiddenLayers; i++ {
-		data := make([]float64, rows*cols)
+	cols = int(topology.Inputs)
+	for i := 0; i < len(topology.HiddenNeurons); i++ {
+		rows := int(neurons[i])
+		data := make([]float32, rows*cols)
 		for j := 0; j < len(data); j++ {
 			_, err := io.ReadFull(f, buf)
 			if err != nil {
 				panic(err)
 			}
-			data[j] = math.Float64frombits(binary.BigEndian.Uint64(buf))
+			data[j] = math.Float32frombits(binary.BigEndian.Uint32(buf))
 		}
-		net.Weights[i] = mat.NewDense(rows, cols, data)
-	}
-
-	for i := uint16(0); i < topology.HiddenLayers; i++ {
-		data := make([]float64, rows*cols)
-		for j := 0; j < len(data); j++ {
-			_, err := io.ReadFull(f, buf)
-			if err != nil {
-				panic(err)
-			}
-			data[j] = math.Float64frombits(binary.BigEndian.Uint64(buf))
-		}
-		net.Biases[i] = mat.NewDense(rows, cols, data)
+		net.Biases[i] = data
+		cols = rows
 	}
 	return net
 }
 
 // Helper functions
 // randomly generate a float64 array
-func randomArray(size int, v float64) (data []float64) {
+func randomArray(size int, v float32) (data []float32) {
 	dist := distuv.Uniform{
-		Min: -1 / math.Sqrt(v),
-		Max: 1 / math.Sqrt(v),
+		Min: -1 / math.Sqrt(float64(v)),
+		Max: 1 / math.Sqrt(float64(v)),
 	}
 
-	data = make([]float64, size)
+	data = make([]float32, size)
 	for i := 0; i < size; i++ {
 		// data[i] = rand.NormFloat64() * math.Pow(v, -0.5)
-		data[i] = dist.Rand()
+		data[i] = float32(dist.Rand())
 	}
 	return
 }
