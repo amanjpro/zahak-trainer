@@ -56,6 +56,21 @@ func CreateNetwork(topology Topology) (net Network) {
 	return
 }
 
+func (net *Network) CreateInputs(position *Position) []uint16 {
+	input := make([]uint16, 0, 64)
+
+	for j := 0; j < 64; j++ {
+		sq := Square(j)
+		piece := position.PieceAt(sq)
+		if piece != NoPiece {
+			index := uint16(piece)*64 + uint16(sq)
+			input = append(input, index)
+		}
+	}
+
+	return input
+}
+
 func (n *Network) SaveCheckpoint(path string) {
 	err := os.MkdirAll(path, os.ModePerm)
 	if err != nil {
