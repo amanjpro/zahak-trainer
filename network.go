@@ -1,36 +1,58 @@
 package main
 
 import (
-	"bufio"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"os"
-	"strconv"
 
 	"gonum.org/v1/gonum/mat"
 	"gonum.org/v1/gonum/stat/distuv"
 )
 
 // Network is a neural network with 3 layers
-type Network struct {
-	inputs        int
-	hiddens       int
-	outputs       int
-	hiddenWeights *mat.Dense
-	outputWeights *mat.Dense
-	learningRate  float64
+type (
+	Topology struct {
+		Inputs        int
+		Outputs       int
+		HiddenLayers  int
+		HiddenNeurons int
+	}
+
+	Network struct {
+		Topology Topology
+		Neurons  []*mat.Dense
+		Weights  []*mat.Dense
+		Biases   []*mat.Dense
+	}
+)
+
+func NewTopology(inputs, outputs, hiddenLayers, hiddenNeurons int) Topology {
+	return Topology{
+		Inputs:        inputs,
+		Outputs:       outputs,
+		HiddenLayers:  hiddenLayers,
+		HiddenNeurons: hiddenNeurons,
+	}
 }
 
 // CreateNetwork creates a neural network with random weights
-func CreateNetwork(input, hidden, output int, rate float64) (net Network) {
+func CreateNetwork(topology Topology) (net Network) {
 	net = Network{
-		inputs:       input,
-		hiddens:      hidden,
-		outputs:      output,
-		learningRate: rate,
+		Topology: topology,
 	}
-	net.hiddenWeights = mat.NewDense(net.hiddens, net.inputs, randomArray(net.inputs*net.hiddens, float64(net.inputs)))
-	net.outputWeights = mat.NewDense(net.outputs, net.hiddens, randomArray(net.hiddens*net.outputs, float64(net.hiddens)))
+
+	net.Neurons = make([]*mat.Dense, topology.HiddenLayers)
+	net.Weights = make([]*mat.Dense, topology.HiddenLayers)
+	net.Biases = make([]*mat.Dense, topology.HiddenLayers)
+
+	for i := 0; i < topology.HiddenLayers; i++ {
+		net.Neurons[i] = mat.NewDense(topology.HiddenNeurons, topology.Inputs, randomArray(topology.Inputs*topology.HiddenNeurons, float64(topology.Inputs)))
+		net.Weights[i] = mat.NewDense(topology.HiddenNeurons, topology.Inputs, randomArray(topology.Inputs*topology.HiddenNeurons, float64(topology.Inputs)))
+		net.Biases[i] = mat.NewDense(topology.HiddenNeurons, topology.Inputs, randomArray(topology.Inputs*topology.HiddenNeurons, float64(topology.Inputs)))
+	}
+
 	return
 }
 
@@ -40,74 +62,83 @@ func (n *Network) SaveCheckpoint(path string) {
 		panic(err)
 	}
 
-	m, err := os.Create(fmt.Sprintf("%s/topology.txt", path))
+	m, err := os.Create(fmt.Sprintf("%s/topology.json", path))
 	if err != nil {
 		panic(err)
 	}
 	defer m.Close()
-	m.WriteString(fmt.Sprintf("%d\n%d\n%d\n%f\n", n.inputs, n.hiddens, n.outputs, n.learningRate))
-
-	h, err := os.Create(fmt.Sprintf("%s/hweights.model", path))
+	js, err := json.Marshal(n.Topology)
 	if err != nil {
 		panic(err)
 	}
-	defer h.Close()
-	n.hiddenWeights.MarshalBinaryTo(h)
+	m.WriteString(string(js))
 
-	o, err := os.Create(fmt.Sprintf("%s/oweights.model", path))
-	if err != nil {
-		panic(err)
+	for i := 0; i < n.Topology.HiddenLayers; i++ {
+		h, err := os.Create(fmt.Sprintf("%s/hidden-%d.neurons", path, i))
+		if err != nil {
+			panic(err)
+		}
+		defer h.Close()
+		n.Neurons[i].MarshalBinaryTo(h)
+
+		w, err := os.Create(fmt.Sprintf("%s/hidden-%d.weights", path, i))
+		if err != nil {
+			panic(err)
+		}
+		defer w.Close()
+		n.Weights[i].MarshalBinaryTo(w)
+
+		b, err := os.Create(fmt.Sprintf("%s/hidden-%d.biases", path, i))
+		if err != nil {
+			panic(err)
+		}
+		defer b.Close()
+		n.Biases[i].MarshalBinaryTo(b)
 	}
-	defer o.Close()
-	n.outputWeights.MarshalBinaryTo(o)
 }
 
 // load a neural network from file
 func LoadCheckpoint(path string) Network {
-	m, err := os.Open(fmt.Sprintf("%s/topology.txt", path))
+	js, err := ioutil.ReadFile(fmt.Sprintf("%s/topology.json", path))
 	if err != nil {
 		panic(err)
 	}
-	defer m.Close()
-	scanner := bufio.NewScanner(m)
-	scanner.Scan()
-	inputs, err := strconv.Atoi(scanner.Text())
-	if err != nil {
-		panic(err)
-	}
-	scanner.Scan()
-	hiddens, err := strconv.Atoi(scanner.Text())
-	if err != nil {
-		panic(err)
-	}
-	scanner.Scan()
-	outputs, err := strconv.Atoi(scanner.Text())
-	if err != nil {
-		panic(err)
-	}
-	scanner.Scan()
-	learningRate, err := strconv.ParseFloat(scanner.Text(), 64)
+	var topology Topology
+	err = json.Unmarshal([]byte(js), &topology)
 	if err != nil {
 		panic(err)
 	}
 
-	net := CreateNetwork(inputs, hiddens, outputs, learningRate)
+	net := CreateNetwork(topology)
 
-	h, err := os.Open(fmt.Sprintf("%s/hweights.model", path))
-	if err != nil {
-		panic(err)
-	}
-	defer h.Close()
-	net.hiddenWeights.Reset()
-	net.hiddenWeights.UnmarshalBinaryFrom(h)
+	for i := 0; i < topology.HiddenLayers; i++ {
+		h, err := os.Open(fmt.Sprintf("%s/hidden-%d.neurons", path, i))
+		if err != nil {
+			panic(err)
+		}
 
-	o, err := os.Open(fmt.Sprintf("%s/oweights.model", path))
-	if err != nil {
-		panic(err)
+		defer h.Close()
+		w, err := os.Open(fmt.Sprintf("%s/hidden-%d.weights", path, i))
+		if err != nil {
+			panic(err)
+		}
+		defer w.Close()
+
+		b, err := os.Open(fmt.Sprintf("%s/hidden-%d.biases", path, i))
+		if err != nil {
+			panic(err)
+		}
+		defer b.Close()
+
+		net.Neurons[i].Reset()
+		net.Neurons[i].UnmarshalBinaryFrom(h)
+
+		net.Weights[i].Reset()
+		net.Weights[i].UnmarshalBinaryFrom(w)
+
+		net.Biases[i].Reset()
+		net.Biases[i].UnmarshalBinaryFrom(b)
 	}
-	net.outputWeights.Reset()
-	net.outputWeights.UnmarshalBinaryFrom(o)
-	defer o.Close()
 
 	return net
 }
