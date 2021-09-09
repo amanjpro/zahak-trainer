@@ -27,13 +27,17 @@ func main() {
 
 	flag.Parse()
 
-	topology := NewTopology(*inputs, *outputs, *layers, *neurons)
+	topology := NewTopology(uint16(*inputs), uint16(*outputs), uint16(*layers), uint16(*neurons))
 	network := CreateNetwork(topology)
+	network.Save("/tmp/net.nnue")
+	network = Load("/tmp/net.nnue")
 
 	if *checkpointPath != "" {
-		network = LoadCheckpoint(*checkpointPath)
+		network = Load(*checkpointPath)
 	}
 
 	fmt.Println("Options:", *epochs, *saveCheckpointPath, *binPath, *epdPath)
-	network.SaveCheckpoint(*saveCheckpointPath)
+	if false {
+		network.Save(*saveCheckpointPath)
+	}
 }
