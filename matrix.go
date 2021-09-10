@@ -20,8 +20,36 @@ func (m *Matrix) Set(row, col int, v float32) {
 	m.Data[col*m.Rows+row] = v
 }
 
-func (m *Matrix) Add(row, col int, v float32) {
+func (m *Matrix) AddTo(row, col int, v float32) {
 	m.Data[col*m.Rows+row] += v
+}
+
+func (m *Matrix) Product(fst, snd Matrix) {
+	for i := 0; i < fst.Rows; i++ {
+		for j := 0; j < snd.Cols; j++ {
+			m.Set(j, i, 0)
+
+			for k := 0; k < fst.Cols; k++ {
+				m.AddTo(j, i, fst.Get(i, k)*snd.Get(k, j))
+			}
+		}
+	}
+}
+
+func (m *Matrix) Add(other Matrix, fn func(float32) float32) {
+	for i := 0; i < m.Rows; i++ {
+		for j := 0; j < m.Cols; j++ {
+			m.Set(j, i, fn(m.Get(i, j)+other.Get(i, j)))
+		}
+	}
+}
+
+func (m *Matrix) Subtract(other Matrix) {
+	for i := 0; i < m.Rows; i++ {
+		for j := 0; j < m.Cols; j++ {
+			m.Set(j, i, m.Get(i, j)-other.Get(i, j))
+		}
+	}
 }
 
 func (output *Matrix) ForwardPropagate(input Matrix,
@@ -29,14 +57,6 @@ func (output *Matrix) ForwardPropagate(input Matrix,
 	biases Matrix,
 	activation func(float32) float32) {
 
-	for i := 0; i < input.Rows; i++ {
-		for j := 0; j < weights.Cols; j++ {
-			output.Set(j, i, 0)
-
-			for k := 0; k < input.Cols; k++ {
-				output.Add(j, i, input.Get(i, k)*weights.Get(k, j))
-			}
-			output.Set(i, j, activation(output.Get(i, j)+biases.Get(i, j)))
-		}
-	}
+	output.Product(input, weights)
+	output.Add(biases, activation)
 }
