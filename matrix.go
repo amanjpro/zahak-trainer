@@ -1,58 +1,42 @@
 package main
 
-import (
-	"gonum.org/v1/gonum/mat"
+type (
+	Matrix struct {
+		Data []float32
+		Rows int
+		Cols int
+	}
 )
 
-func dot(m, n mat.Matrix) mat.Matrix {
-	r, _ := m.Dims()
-	_, c := n.Dims()
-	o := mat.NewDense(r, c, nil)
-	o.Product(m, n)
-	return o
+func (m *Matrix) Size() int {
+	return m.Rows * m.Cols
 }
 
-func apply(fn func(i, j int, v float64) float64, m mat.Matrix) mat.Matrix {
-	r, c := m.Dims()
-	o := mat.NewDense(r, c, nil)
-	o.Apply(fn, m)
-	return o
+func (m *Matrix) Get(row, col int) float32 {
+	return m.Data[col*m.Rows+row]
 }
 
-func scale(s float64, m mat.Matrix) mat.Matrix {
-	r, c := m.Dims()
-	o := mat.NewDense(r, c, nil)
-	o.Scale(s, m)
-	return o
+func (m *Matrix) Set(row, col int, v float32) {
+	m.Data[col*m.Rows+row] = v
 }
 
-func multiply(m, n mat.Matrix) mat.Matrix {
-	r, c := m.Dims()
-	o := mat.NewDense(r, c, nil)
-	o.MulElem(m, n)
-	return o
+func (m *Matrix) Add(row, col int, v float32) {
+	m.Data[col*m.Rows+row] += v
 }
 
-func add(m, n mat.Matrix) mat.Matrix {
-	r, c := m.Dims()
-	o := mat.NewDense(r, c, nil)
-	o.Add(m, n)
-	return o
-}
+func (output *Matrix) ForwardPropagate(input Matrix,
+	weights Matrix,
+	biases Matrix,
+	activation func(float32) float32) {
 
-func subtract(m, n mat.Matrix) mat.Matrix {
-	r, c := m.Dims()
-	o := mat.NewDense(r, c, nil)
-	o.Sub(m, n)
-	return o
-}
+	for i := 0; i < input.Rows; i++ {
+		for j := 0; j < weights.Cols; j++ {
+			output.Set(j, i, 0)
 
-func addScalar(i float64, m mat.Matrix) mat.Matrix {
-	r, c := m.Dims()
-	a := make([]float64, r*c)
-	for x := 0; x < r*c; x++ {
-		a[x] = i
+			for k := 0; k < input.Cols; k++ {
+				output.Add(j, i, input.Get(i, k)*weights.Get(k, j))
+			}
+			output.Set(i, j, activation(output.Get(i, j)+biases.Get(i, j)))
+		}
 	}
-	n := mat.NewDense(r, c, a)
-	return add(m, n)
 }
