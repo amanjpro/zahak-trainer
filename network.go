@@ -21,7 +21,7 @@ type (
 		Topology Topology
 		Neurons  [][]float32
 		Weights  [][]float32
-		Biases   []float32
+		Biases   [][]float32
 	}
 )
 
@@ -41,13 +41,14 @@ func CreateNetwork(topology Topology) (net Network) {
 
 	net.Neurons = make([][]float32, len(topology.HiddenNeurons))
 	net.Weights = make([][]float32, len(topology.HiddenNeurons))
-	net.Biases = randomArray(int(topology.Outputs), float32(topology.Inputs))
+	net.Biases = make([][]float32, len(topology.HiddenNeurons))
 
 	cols := int(topology.Inputs)
 	for i := 0; i < len(topology.HiddenNeurons); i++ {
 		rows := int(topology.HiddenNeurons[i])
 		net.Neurons[i] = randomArray(cols*rows, float32(topology.Inputs))
 		net.Weights[i] = randomArray(cols*rows, float32(topology.Inputs))
+		net.Biases[i] = randomArray(cols*rows, float32(topology.Inputs))
 		cols = rows
 	}
 
@@ -81,7 +82,7 @@ func (net *Network) CreateInputs(position *Position) []uint16 {
 // - L uint16 to each the size of each hidden layer (let's call it NN)
 // - uint16 number to represent the number of outputs
 // - Followed float32 numbers, which represent all the hidden weights, stored one after the other
-// - Followed float32 numbers, which represent the bias nodes, stored one after the other
+// - Followed float32 numbers, which represent all the hidden biases, stored one after the other
 func (n *Network) Save(file string) {
 	f, err := os.Create(file)
 	if err != nil {
@@ -122,12 +123,14 @@ func (n *Network) Save(file string) {
 		}
 	}
 
-	biases := n.Biases
-	for i := 0; i < len(biases); i++ {
-		binary.BigEndian.PutUint32(buf, math.Float32bits(biases[i]))
-		_, err := f.Write(buf)
-		if err != nil {
-			panic(err)
+	for i := 0; i < len(n.Topology.HiddenNeurons); i++ {
+		biases := n.Biases[i]
+		for j := 0; j < len(biases); j++ {
+			binary.BigEndian.PutUint32(buf, math.Float32bits(biases[j]))
+			_, err := f.Write(buf)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 }
@@ -182,7 +185,7 @@ func Load(path string) Network {
 
 	net.Neurons = make([][]float32, len(topology.HiddenNeurons))
 	net.Weights = make([][]float32, len(topology.HiddenNeurons))
-	net.Biases = make([]float32, topology.Outputs)
+	net.Biases = make([][]float32, len(topology.HiddenNeurons))
 
 	buf = make([]byte, 4)
 	cols := int(topology.Inputs)
@@ -201,12 +204,19 @@ func Load(path string) Network {
 		cols = rows
 	}
 
-	for i := 0; i < len(net.Biases); i++ {
-		_, err := io.ReadFull(f, buf)
-		if err != nil {
-			panic(err)
+	cols = int(topology.Inputs)
+	for i := 0; i < len(topology.HiddenNeurons); i++ {
+		rows := int(neurons[i])
+		data := make([]float32, rows*cols)
+		for j := 0; j < len(data); j++ {
+			_, err := io.ReadFull(f, buf)
+			if err != nil {
+				panic(err)
+			}
+			data[j] = math.Float32frombits(binary.BigEndian.Uint32(buf))
 		}
-		net.Biases[i] = math.Float32frombits(binary.BigEndian.Uint32(buf))
+		net.Biases[i] = data
+		cols = rows
 	}
 	return net
 }
