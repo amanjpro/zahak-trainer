@@ -43,13 +43,13 @@ func CreateNetwork(topology Topology) (net Network) {
 	net.Weights = make([]*Matrix, len(topology.HiddenNeurons))
 	net.Biases = make([]*Matrix, len(topology.HiddenNeurons))
 
-	cols := int(topology.Inputs)
+	inputSize := int(topology.Inputs)
 	for i := 0; i < len(topology.HiddenNeurons); i++ {
-		rows := int(topology.HiddenNeurons[i])
-		net.Neurons[i] = NewMatrix(rows, cols, randomArray(cols*rows, float32(topology.Inputs)))
-		net.Weights[i] = NewMatrix(rows, cols, randomArray(cols*rows, float32(topology.Inputs)))
-		net.Biases[i] = NewMatrix(1, cols, randomArray(cols, float32(topology.Inputs)))
-		cols = rows
+		outputSize := int(topology.HiddenNeurons[i])
+		net.Neurons[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
+		net.Weights[i] = NewMatrix(outputSize, inputSize, randomArray(inputSize*outputSize, float32(topology.Inputs)))
+		net.Biases[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
+		inputSize = outputSize
 	}
 
 	return
@@ -188,10 +188,10 @@ func Load(path string) Network {
 	net.Biases = make([]*Matrix, len(topology.HiddenNeurons))
 
 	buf = make([]byte, 4)
-	cols := int(topology.Inputs)
+	inputSize := int(topology.Inputs)
 	for i := 0; i < len(topology.HiddenNeurons); i++ {
-		rows := int(neurons[i])
-		data := make([]float32, rows*cols)
+		outputSize := int(neurons[i])
+		data := make([]float32, outputSize*inputSize)
 		for j := 0; j < len(data); j++ {
 			_, err := io.ReadFull(f, buf)
 			if err != nil {
@@ -199,14 +199,13 @@ func Load(path string) Network {
 			}
 			data[j] = math.Float32frombits(binary.BigEndian.Uint32(buf))
 		}
-		net.Neurons[i] = NewMatrix(rows, cols, randomArray(rows*cols, float32(topology.Inputs)))
-		net.Weights[i] = NewMatrix(rows, cols, data)
-		cols = rows
+		net.Weights[i] = NewMatrix(outputSize, inputSize, data)
+		inputSize = outputSize
 	}
 
-	cols = int(topology.Inputs)
 	for i := 0; i < len(topology.HiddenNeurons); i++ {
-		data := make([]float32, cols)
+		outputSize := int(neurons[i])
+		data := make([]float32, outputSize)
 		for j := 0; j < len(data); j++ {
 			_, err := io.ReadFull(f, buf)
 			if err != nil {
@@ -214,10 +213,25 @@ func Load(path string) Network {
 			}
 			data[j] = math.Float32frombits(binary.BigEndian.Uint32(buf))
 		}
-		net.Biases[i] = NewMatrix(1, cols, data)
-		cols = int(neurons[i])
+		net.Biases[i] = SingletonMatrix(outputSize, data)
+		net.Neurons[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
 	}
 	return net
+}
+
+func (n *Network) ForwardPropagate(input *Matrix) float32 {
+	n.Neurons[0].ForwardPropagate(input, n.Weights[0], n.Biases[0], Relu)
+
+	activation := Relu
+	for i := 1; i < len(n.Neurons); i++ {
+		if i == len(n.Neurons)-1 {
+			activation = Sigmoid
+		}
+
+		n.Neurons[i].ForwardPropagate(n.Neurons[i-1], n.Weights[i], n.Biases[i], activation)
+	}
+
+	return n.Neurons[len(n.Neurons)-1].Data[0]
 }
 
 // Helper functions

@@ -8,6 +8,10 @@ type (
 	}
 )
 
+func SingletonMatrix(rows int, data []float32) *Matrix {
+	return NewMatrix(rows, 1, data)
+}
+
 func NewMatrix(rows, cols int, data []float32) *Matrix {
 	if len(data) != rows*cols {
 		panic("Wrong matrix dimensions")
@@ -40,7 +44,6 @@ func (m *Matrix) Product(fst, snd *Matrix) {
 	for i := 0; i < fst.Rows; i++ {
 		for j := 0; j < snd.Cols; j++ {
 			m.Set(j, i, 0)
-
 			for k := 0; k < fst.Cols; k++ {
 				m.AddTo(j, i, fst.Get(i, k)*snd.Get(k, j))
 			}
