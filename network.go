@@ -48,7 +48,7 @@ func CreateNetwork(topology Topology) (net Network) {
 		rows := int(topology.HiddenNeurons[i])
 		net.Neurons[i] = NewMatrix(rows, cols, randomArray(cols*rows, float32(topology.Inputs)))
 		net.Weights[i] = NewMatrix(rows, cols, randomArray(cols*rows, float32(topology.Inputs)))
-		net.Biases[i] = NewMatrix(rows, cols, randomArray(cols*rows, float32(topology.Inputs)))
+		net.Biases[i] = NewMatrix(1, cols, randomArray(cols, float32(topology.Inputs)))
 		cols = rows
 	}
 
@@ -206,8 +206,7 @@ func Load(path string) Network {
 
 	cols = int(topology.Inputs)
 	for i := 0; i < len(topology.HiddenNeurons); i++ {
-		rows := int(neurons[i])
-		data := make([]float32, rows*cols)
+		data := make([]float32, cols)
 		for j := 0; j < len(data); j++ {
 			_, err := io.ReadFull(f, buf)
 			if err != nil {
@@ -215,8 +214,8 @@ func Load(path string) Network {
 			}
 			data[j] = math.Float32frombits(binary.BigEndian.Uint32(buf))
 		}
-		net.Biases[i] = NewMatrix(rows, cols, data)
-		cols = rows
+		net.Biases[i] = NewMatrix(1, cols, data)
+		cols = int(neurons[i])
 	}
 	return net
 }
