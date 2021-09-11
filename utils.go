@@ -63,46 +63,6 @@ func CalculateCost(output, wdlTarget, evalTarget *Matrix) *Matrix {
 	return costMatrix
 }
 
-// func (net *Network) CalculateCosts(samples []Sample) float32 {
-// 	var cost float32 = 0.0
-//
-// 	for _, sample := range samples {
-// 		cost += net.CalculateCost(sample)
-// 	}
-//
-// 	return cost / float32(len(samples))
-// }
-
-// func CalculateCostGradient(sample Sample, output *Matrix) float32 {
-// 	return 2.0*CostEvalWeight*(output.Mean()-sample.EvalTarget.Mean()) +
-// 		2.0*CostWDLWeight*(output.Mean()-sample.WDLTarget.Mean())
-// }
-
-func (grad *Gradient) UpdateGradient(delta float32) {
-	grad.Value += delta
-}
-
-func (grad *Gradient) CalculateGradient() float32 {
-	var beta1 float32 = 0.9
-	var beta2 float32 = 0.999
-	var lr float32 = 0.01
-
-	if grad.Value == 0 {
-		return 0
-	}
-
-	grad.FirstMoment = grad.FirstMoment*beta1 + grad.Value*(1.0-beta1)
-	grad.SecondMoment = grad.SecondMoment*beta2 + (grad.Value*grad.Value)*(1.0-beta2)
-
-	return lr * grad.FirstMoment / float32(math.Sqrt(float64(grad.SecondMoment))+1e-8)
-}
-
-func (grad *Gradient) ApplyGradient(parameter float32) float32 {
-	parameter -= grad.CalculateGradient()
-	grad.Value = 0
-	return parameter
-}
-
 func ParseLine(line string) Data {
 	parts := strings.Split(line, ";")
 	if len(parts) != 4 {
