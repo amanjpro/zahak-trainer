@@ -6,7 +6,7 @@ import (
 )
 
 func TestBinaryReaderWriter(t *testing.T) {
-	top := NewTopology(10, 11, []uint16{12, 13, 14, 15, 16})
+	top := NewTopology(10, 11, []uint32{12, 13, 14, 15, 16})
 	net1 := CreateNetwork(top)
 
 	net1.Save("/tmp/net.nnue")

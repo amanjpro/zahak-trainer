@@ -31,16 +31,16 @@ func main() {
 	if len(words) < 1 {
 		panic("At least one layer of hidden neurons are required")
 	}
-	hiddenNeurons := make([]uint16, len(words))
+	hiddenNeurons := make([]uint32, len(words))
 	for i, w := range words {
 		parsed, err := strconv.Atoi(w)
 		if err != nil {
 			panic(err)
 		}
-		hiddenNeurons[i] = uint16(parsed)
+		hiddenNeurons[i] = uint32(parsed)
 	}
 
-	topology := NewTopology(uint16(*inputs), uint16(*outputs), hiddenNeurons)
+	topology := NewTopology(uint32(*inputs), uint32(*outputs), hiddenNeurons)
 	network := CreateNetwork(topology)
 	network.Save("/tmp/net.nnue")
 	network = Load("/tmp/net.nnue")
