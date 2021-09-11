@@ -62,15 +62,15 @@ func CreateNetwork(topology Topology, id uint32) (net Network) {
 	return
 }
 
-func (net *Network) CreateInputs(position *Position) []uint16 {
-	input := make([]uint16, 0, 64)
+func (net *Network) CreateInput(position Position) *Matrix {
+	input := EmptyMatrix(net.Topology.Inputs, 1)
 
 	for j := 0; j < 64; j++ {
 		sq := Square(j)
 		piece := position.PieceAt(sq)
 		if piece != NoPiece {
 			index := uint16(piece)*64 + uint16(sq)
-			input = append(input, index)
+			input.Data[index] = 1
 		}
 	}
 
