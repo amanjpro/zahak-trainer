@@ -41,19 +41,24 @@ func CreateNetwork(topology Topology, id uint32) (net Network) {
 		Id:       id,
 	}
 
-	net.Neurons = make([]*Matrix, len(topology.HiddenNeurons))
-	net.Weights = make([]*Matrix, len(topology.HiddenNeurons))
-	net.Biases = make([]*Matrix, len(topology.HiddenNeurons))
+	net.Neurons = make([]*Matrix, len(topology.HiddenNeurons)+1)
+	net.Weights = make([]*Matrix, len(topology.HiddenNeurons)+1)
+	net.Biases = make([]*Matrix, len(topology.HiddenNeurons)+1)
 
 	inputSize := topology.Inputs
-	for i := 0; i < len(topology.HiddenNeurons); i++ {
-		outputSize := topology.HiddenNeurons[i]
+	i := 0
+	for ; i < len(net.Neurons); i++ {
+		var outputSize uint32
+		if i == len(topology.HiddenNeurons) {
+			outputSize = topology.Outputs
+		} else {
+			outputSize = topology.HiddenNeurons[i]
+		}
 		net.Neurons[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
 		net.Weights[i] = NewMatrix(outputSize, inputSize, randomArray(inputSize*outputSize, float32(topology.Inputs)))
 		net.Biases[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
 		inputSize = outputSize
 	}
-
 	return
 }
 
@@ -122,7 +127,7 @@ func (n *Network) Save(file string) {
 	}
 
 	buf = make([]byte, 4)
-	for i := 0; i < len(n.Topology.HiddenNeurons); i++ {
+	for i := 0; i < len(n.Neurons); i++ {
 		weights := n.Weights[i].Data
 		for j := 0; j < len(weights); j++ {
 			binary.BigEndian.PutUint32(buf, math.Float32bits(weights[j]))
@@ -194,14 +199,19 @@ func Load(path string) Network {
 		Id:       id,
 	}
 
-	net.Neurons = make([]*Matrix, len(topology.HiddenNeurons))
-	net.Weights = make([]*Matrix, len(topology.HiddenNeurons))
-	net.Biases = make([]*Matrix, len(topology.HiddenNeurons))
+	net.Neurons = make([]*Matrix, len(topology.HiddenNeurons)+1)
+	net.Weights = make([]*Matrix, len(topology.HiddenNeurons)+1)
+	net.Biases = make([]*Matrix, len(topology.HiddenNeurons)+1)
 
 	buf = make([]byte, 4)
 	inputSize := topology.Inputs
-	for i := 0; i < len(topology.HiddenNeurons); i++ {
-		outputSize := neurons[i]
+	for i := 0; i < len(net.Neurons); i++ {
+		var outputSize uint32
+		if i == len(neurons) {
+			outputSize = outputs
+		} else {
+			outputSize = neurons[i]
+		}
 		data := make([]float32, outputSize*inputSize)
 		for j := 0; j < len(data); j++ {
 			_, err := io.ReadFull(f, buf)
