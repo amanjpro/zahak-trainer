@@ -41,7 +41,7 @@ func main() {
 	}
 
 	topology := NewTopology(uint32(*inputs), uint32(*outputs), hiddenNeurons)
-	network := CreateNetwork(topology)
+	network := CreateNetwork(topology, 9)
 	network.Save("/tmp/net.nnue")
 	network = Load("/tmp/net.nnue")
 

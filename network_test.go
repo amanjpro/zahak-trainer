@@ -7,13 +7,17 @@ import (
 
 func TestBinaryReaderWriter(t *testing.T) {
 	top := NewTopology(10, 11, []uint32{12, 13, 14, 15, 16})
-	net1 := CreateNetwork(top)
+	net1 := CreateNetwork(top, 30)
 
 	net1.Save("/tmp/net.nnue")
 	net2 := Load("/tmp/net.nnue")
 
 	if !sameTopology(net1.Topology, net2.Topology) {
-		t.Errorf("Topology was was read incorrectly")
+		t.Errorf("Topology was read incorrectly")
+	}
+
+	if net1.Id != net2.Id {
+		t.Errorf("Network Id was read incorrectly")
 	}
 
 	for i := 0; i < len(top.HiddenNeurons); i++ {

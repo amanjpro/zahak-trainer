@@ -18,6 +18,7 @@ type (
 	}
 
 	Network struct {
+		Id       uint32
 		Topology Topology
 		Neurons  []*Matrix
 		Weights  []*Matrix
@@ -34,9 +35,10 @@ func NewTopology(inputs, outputs uint32, hiddenNeurons []uint32) Topology {
 }
 
 // CreateNetwork creates a neural network with random weights
-func CreateNetwork(topology Topology) (net Network) {
+func CreateNetwork(topology Topology, id uint32) (net Network) {
 	net = Network{
 		Topology: topology,
+		Id:       id,
 	}
 
 	net.Neurons = make([]*Matrix, len(topology.HiddenNeurons))
@@ -99,6 +101,13 @@ func (n *Network) Save(file string) {
 		panic(err)
 	}
 
+	// Write network Id
+	binary.BigEndian.PutUint32(buf, n.Id)
+	_, err = f.Write(buf)
+	if err != nil {
+		panic(err)
+	}
+
 	// Write Topology
 	buf = make([]byte, 3*4+4*len(n.Topology.HiddenNeurons))
 	binary.BigEndian.PutUint32(buf[0:], n.Topology.Inputs)
@@ -152,6 +161,12 @@ func Load(path string) Network {
 		panic("Magic word does not match expected, exiting")
 	}
 
+	_, err = io.ReadFull(f, buf)
+	if err != nil {
+		panic(err)
+	}
+	id := binary.BigEndian.Uint32(buf)
+
 	// Read Topology Header
 	buf = make([]byte, 12)
 	_, err = io.ReadFull(f, buf)
@@ -176,6 +191,7 @@ func Load(path string) Network {
 
 	net := Network{
 		Topology: topology,
+		Id:       id,
 	}
 
 	net.Neurons = make([]*Matrix, len(topology.HiddenNeurons))
