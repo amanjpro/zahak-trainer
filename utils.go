@@ -10,8 +10,8 @@ import (
 type (
 	Sample struct {
 		Input      *Matrix
-		EvalTarget float32
-		WDLTarget  float32
+		EvalTarget *Matrix
+		WDLTarget  *Matrix
 	}
 
 	Gradient struct {
@@ -31,6 +31,7 @@ const (
 	SigmoidScale   float32 = 2.5 / 1024
 	CostEvalWeight float32 = 0.5
 	CostWDLWeight  float32 = 1.0 - CostEvalWeight
+	LearningRate   float32 = 0.01
 )
 
 func Sigmoid(x float32) float32 {
@@ -41,39 +42,41 @@ func SigmoidPrime(x float32) float32 {
 	return x * (1.0 - x) * SigmoidScale
 }
 
-func Relu(x float32) float32 {
+func ReLu(x float32) float32 {
 	return float32(math.Max(float64(x), 0.0))
 }
 
-func ReluPrime(x float32) float32 {
+func ReLuPrime(x float32) float32 {
 	if x > 0.0 {
 		return 1.0
 	}
 	return 0.0
 }
 
-func (net *Network) CalculateCost(sample Sample) float32 {
-	var output float32 = net.ForwardPropagate(sample.Input)
-
-	lhs := CostEvalWeight * float32(math.Pow(float64(output-sample.EvalTarget), 2.0))
-	rhs := CostWDLWeight * float32(math.Pow(float64(output-sample.WDLTarget), 2.0))
-	return lhs + rhs
-}
-
-func (net *Network) CalculateCosts(samples []Sample) float32 {
-	var cost float32 = 0.0
-
-	for _, sample := range samples {
-		cost += net.CalculateCost(sample)
+func CalculateCost(output, wdlTarget, evalTarget *Matrix) *Matrix {
+	costMatrix := FromTemplate(output)
+	for i := uint32(0); i < output.Size(); i++ {
+		lhs := CostEvalWeight * float32(math.Pow(float64(output.Data[i]-evalTarget.Data[i]), 2.0))
+		rhs := CostWDLWeight * float32(math.Pow(float64(output.Data[i]-wdlTarget.Data[i]), 2.0))
+		costMatrix.Data[i] = lhs + rhs
 	}
-
-	return cost / float32(len(samples))
+	return costMatrix
 }
 
-func CalculateCostGradient(sample Sample, output float32) float32 {
-	return 2.0*CostEvalWeight*(output-sample.EvalTarget) +
-		2.0*CostWDLWeight*(output-sample.WDLTarget)
-}
+// func (net *Network) CalculateCosts(samples []Sample) float32 {
+// 	var cost float32 = 0.0
+//
+// 	for _, sample := range samples {
+// 		cost += net.CalculateCost(sample)
+// 	}
+//
+// 	return cost / float32(len(samples))
+// }
+
+// func CalculateCostGradient(sample Sample, output *Matrix) float32 {
+// 	return 2.0*CostEvalWeight*(output.Mean()-sample.EvalTarget.Mean()) +
+// 		2.0*CostWDLWeight*(output.Mean()-sample.WDLTarget.Mean())
+// }
 
 func (grad *Gradient) UpdateGradient(delta float32) {
 	grad.Value += delta
