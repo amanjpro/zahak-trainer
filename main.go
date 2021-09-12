@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"math/rand"
 	"strconv"
 	"strings"
 )
@@ -19,11 +19,12 @@ func main() {
 	inputs := flag.Int("inputs", DefaultNumberOfInputs, "Number of inputs")
 	neurons := flag.String("hiddens", DefaultNumberOfHiddenNeurons, "Number of hidden neurons, for multi-layer you can send comma separated numbers")
 	outputs := flag.Int("outputs", DefaultNumberOfOutputs, "Number of outputs")
-
-	checkpointPath := flag.String("from-checkpoint", "", "Start from a known checkpoint")
-	saveCheckpointPath := flag.String("to-checkpoint", "", "Save checkpoints to")
-	binPath := flag.String("nnue-path", "", "Final NNUE path")
-	epdPath := flag.String("input-path", "", "Path to input dataset")
+	learningRate := flag.Float64("lr", float64(LearningRate), "Learning Rate")
+	sigmoidScale := flag.Float64("sigmoid-scale", float64(SigmoidScale), "Sigmoid scale")
+	networkId := flag.Int("network-id", int(uint32(rand.Int())), "A unique id for the network")
+	epdPath := flag.String("input-path", "", "Path to input dataset (FENs)")
+	startNet := flag.String("from-net", "", "Path to a network, to be used as a starting point")
+	binPath := flag.String("output-path", "", "Final NNUE path directory")
 
 	flag.Parse()
 
@@ -40,17 +41,18 @@ func main() {
 		hiddenNeurons[i] = uint32(parsed)
 	}
 
-	topology := NewTopology(uint32(*inputs), uint32(*outputs), hiddenNeurons)
-	network := CreateNetwork(topology, 9)
-	network.Save("/tmp/net.nnue")
-	network = Load("/tmp/net.nnue")
-
-	if *checkpointPath != "" {
-		network = Load(*checkpointPath)
+	var network Network
+	if *startNet != "" {
+		network = Load(*startNet)
+	} else {
+		topology := NewTopology(uint32(*inputs), uint32(*outputs), hiddenNeurons)
+		network = CreateNetwork(topology, uint32(*networkId))
 	}
 
-	fmt.Println("Options:", *epochs, *saveCheckpointPath, *binPath, *epdPath)
-	if false {
-		network.Save(*saveCheckpointPath)
-	}
+	SigmoidScale = float32(*sigmoidScale)
+	LearningRate = float32(*learningRate)
+
+	trainer := NewTrainer(network, LoadDataset(*epdPath), *epochs)
+
+	trainer.Train(*binPath)
 }

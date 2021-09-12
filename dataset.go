@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -14,7 +16,32 @@ type (
 	}
 )
 
-func (net *Network) ParseLine(line string) Data {
+func LoadDataset(path string) []*Data {
+	file, err := os.Open(path)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	data := make([]*Data, 0, 14_000_000)
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line == "" {
+			break
+		}
+		data = append(data, ParseLine(line))
+	}
+
+	if err := scanner.Err(); err != nil {
+		panic(err)
+	}
+
+	return data
+}
+
+func ParseLine(line string) *Data {
 	parts := strings.Split(line, ";")
 	if len(parts) != 4 {
 		panic(fmt.Sprintf("Bad line %s\n", line))
@@ -40,7 +67,7 @@ func (net *Network) ParseLine(line string) Data {
 		panic(fmt.Sprintf("Bad line %s\n", line))
 	}
 
-	return Data{
+	return &Data{
 		Input:   pos,
 		Score:   NewMatrix(1, 1, []float32{Sigmoid(float32(score))}),
 		Outcome: NewMatrix(1, 1, []float32{float32(outcome)}),

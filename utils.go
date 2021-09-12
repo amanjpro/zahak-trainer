@@ -4,19 +4,9 @@ import (
 	"math"
 )
 
-type (
-	Gradient struct {
-		Value        float32
-		FirstMoment  float32
-		SecondMoment float32
-	}
-)
-
 const (
-	SigmoidScale   float32 = 2.5 / 1024
 	CostEvalWeight float32 = 0.5
 	CostWDLWeight  float32 = 1.0 - CostEvalWeight
-	LearningRate   float32 = 0.01
 )
 
 func Sigmoid(x float32) float32 {
