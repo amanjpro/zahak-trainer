@@ -47,11 +47,11 @@ func (t *Trainer) Train(path string) {
 		sample := t.getSample()
 		fmt.Printf("Started Epoch %d at %s\n", epoch, time.Now().String())
 		for _, index := range sample.Inputs {
-			input := t.Dataset[index]
+			data := t.Dataset[index]
 			// Study
-			t.Net.ForwardPropagate(input.Input)
+			t.Net.ForwardPropagate(t.Net.CreateInput(data.Input))
 			// Teach
-			errors := t.Net.FindErrors(input.Score, input.Outcome)
+			errors := t.Net.FindErrors(data.Score, data.Outcome)
 			// Learn
 			t.Net.BackPropagate(errors)
 		}

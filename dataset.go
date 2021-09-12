@@ -8,7 +8,7 @@ import (
 
 type (
 	Data struct {
-		Input   *Matrix
+		Input   Position
 		Score   *Matrix
 		Outcome *Matrix
 	}
@@ -41,7 +41,7 @@ func (net *Network) ParseLine(line string) Data {
 	}
 
 	return Data{
-		Input:   net.CreateInput(pos),
+		Input:   pos,
 		Score:   NewMatrix(1, 1, []float32{Sigmoid(float32(score))}),
 		Outcome: NewMatrix(1, 1, []float32{float32(outcome)}),
 	}
