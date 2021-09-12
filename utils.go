@@ -28,12 +28,11 @@ func ReLuPrime(x float32) float32 {
 	return 0.0
 }
 
-func CalculateCost(output, wdlTarget, evalTarget *Matrix) *Matrix {
-	costMatrix := FromTemplate(output)
-	for i := uint32(0); i < output.Size(); i++ {
-		lhs := CostEvalWeight * float32(math.Pow(float64(output.Data[i]-evalTarget.Data[i]), 2.0))
-		rhs := CostWDLWeight * float32(math.Pow(float64(output.Data[i]-wdlTarget.Data[i]), 2.0))
-		costMatrix.Data[i] = lhs + rhs
+func CalculateCost(output *Matrix, evalTarget, wdlTarget float32) *Matrix {
+	fn := func(x float32) float32 {
+		lhs := CostEvalWeight * float32(math.Pow(float64(x-evalTarget), 2.0))
+		rhs := CostWDLWeight * float32(math.Pow(float64(x-wdlTarget), 2.0))
+		return lhs + rhs
 	}
-	return costMatrix
+	return Apply(output, fn)
 }

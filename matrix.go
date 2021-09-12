@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 type (
 	Matrix struct {
 		Data []float32
@@ -55,6 +57,7 @@ func (m *Matrix) Get(row, col uint32) float32 {
 
 func (m *Matrix) Set(row, col uint32, v float32) {
 	if row >= m.Rows || col >= m.Cols {
+		fmt.Println(m.Rows, row, m.Cols, col)
 		panic("Bad Address")
 	}
 	m.Data[col*m.Rows+row] = v
@@ -72,14 +75,19 @@ func (m *Matrix) T() *Transposed {
 }
 
 func (m *Matrix) Dot(fst, snd MatrixLike) {
-	if m.Cols != snd.GetCols() || m.Rows != fst.GetCols() || fst.GetCols() != snd.GetCols() {
+	// - The number of columns of the 1st matrix must equal the number of rows of the 2nd matrix.
+	// - And the result will have the same number of rows as the 1st matrix, and the same number of columns as the 2nd matrix.
+	if m.Cols != snd.GetCols() || m.Rows != fst.GetRows() || fst.GetCols() != snd.GetRows() {
+		fmt.Println(m.Cols != snd.GetCols(), m.Rows != fst.GetRows(), fst.GetCols() != snd.GetRows())
+		fmt.Println(m.Cols, snd.GetCols(), m.Rows, fst.GetRows(), fst.GetCols(), snd.GetRows())
+		fmt.Println(m.Rows, m.Cols, fst.GetRows(), fst.GetCols(), snd.GetRows(), snd.GetCols())
 		panic("Incompatible matrices for multiplication")
 	}
 	for i := uint32(0); i < fst.GetRows(); i++ {
 		for j := uint32(0); j < snd.GetCols(); j++ {
-			m.Set(j, i, 0)
+			m.Set(i, j, 0)
 			for k := uint32(0); k < fst.GetCols(); k++ {
-				m.AddTo(j, i, fst.Get(i, k)*snd.Get(k, j))
+				m.AddTo(i, j, fst.Get(i, k)*snd.Get(k, j))
 			}
 		}
 	}
@@ -131,14 +139,13 @@ func (m *Matrix) SumColumns(mat *Matrix) {
 }
 
 func (m *Matrix) Scale(mat *Matrix, scaleFactor float32) {
-	for i := uint32(0); i < m.Size(); i++ {
-		m.Data[i] = mat.Data[i] * scaleFactor
-	}
+	m.Apply(mat, func(x float32) float32 { return x * scaleFactor })
 }
 
 func (m *Matrix) Multiply(fst *Matrix, snd *Matrix) {
 	if m.Cols != fst.Cols || m.Cols != snd.Cols ||
 		m.Rows != fst.Rows || m.Rows != snd.Rows {
+		fmt.Println(m.Rows, m.Cols, fst.GetRows(), fst.GetCols(), snd.GetRows(), snd.GetCols())
 		panic("Bad sized matrices")
 	}
 	for i := uint32(0); i < m.Size(); i++ {
@@ -181,6 +188,51 @@ func (m *Matrix) Subtract(fst, snd *Matrix) {
 }
 
 func (output *Matrix) ForwardPropagate(input, weights, biases *Matrix, activation func(float32) float32) {
-	output.Dot(input, weights)
+	output.Dot(weights, input)
 	output.AddAndApply(output, biases, activation)
+}
+
+func Multiply(fst, snd *Matrix) *Matrix {
+	m := FromTemplate(fst)
+	m.Multiply(fst, snd)
+	return m
+}
+
+func Add(fst, snd *Matrix) *Matrix {
+	m := FromTemplate(fst)
+	m.Add(fst, snd)
+	return m
+}
+
+func Subtract(fst, snd *Matrix) *Matrix {
+	m := FromTemplate(fst)
+	m.Subtract(fst, snd)
+	return m
+}
+
+func Apply(fst *Matrix, fn func(x float32) float32) *Matrix {
+	m := FromTemplate(fst)
+	m.Apply(fst, fn)
+	return m
+}
+
+func AddAndApply(fst, snd *Matrix, fn func(x float32) float32) *Matrix {
+	m := FromTemplate(fst)
+	m.AddAndApply(fst, snd, fn)
+	return m
+}
+
+func Dot(fst, snd MatrixLike) *Matrix {
+	m := EmptyMatrix(fst.GetRows(), snd.GetCols())
+	m.Dot(fst, snd)
+	return m
+}
+
+func SumColumns(mat *Matrix) *Matrix {
+	m := EmptyMatrix(1, mat.GetCols())
+	m.SumColumns(mat)
+	return m
+}
+func Scale(mat *Matrix, scaleFactor float32) *Matrix {
+	return Apply(mat, func(x float32) float32 { return x * scaleFactor })
 }

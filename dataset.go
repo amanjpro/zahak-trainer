@@ -11,8 +11,8 @@ import (
 type (
 	Data struct {
 		Input   Position
-		Score   *Matrix
-		Outcome *Matrix
+		Score   float32
+		Outcome float32
 	}
 )
 
@@ -60,7 +60,7 @@ func ParseLine(line string) *Data {
 
 	outcomePart := strings.Split(parts[3], ":")
 	if len(outcomePart) != 2 {
-		panic(fmt.Sprintf("Bad line %s\n", line))
+		panic(fmt.Sprintf("Bad line %s\n", parts[3]))
 	}
 	outcome, err := strconv.ParseFloat(outcomePart[1], 32)
 	if err != nil {
@@ -69,7 +69,7 @@ func ParseLine(line string) *Data {
 
 	return &Data{
 		Input:   pos,
-		Score:   NewMatrix(1, 1, []float32{Sigmoid(float32(score))}),
-		Outcome: NewMatrix(1, 1, []float32{float32(outcome)}),
+		Score:   Sigmoid(float32(score)),
+		Outcome: float32(outcome),
 	}
 }

@@ -54,8 +54,8 @@ func CreateNetwork(topology Topology, id uint32) (net Network) {
 		} else {
 			outputSize = topology.HiddenNeurons[i]
 		}
-		net.Neurons[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
 		net.Weights[i] = NewMatrix(outputSize, inputSize, randomArray(inputSize*outputSize, float32(topology.Inputs)))
+		net.Neurons[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
 		net.Biases[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
 		inputSize = outputSize
 	}
@@ -239,8 +239,7 @@ func Load(path string) Network {
 
 func errorOfLayer(hiddenLayerErrors *[]*Matrix, i int, fst, snd *Matrix) {
 	transposed := fst.T()
-	(*hiddenLayerErrors)[i] = EmptyMatrix(transposed.GetRows(), snd.Cols)
-	(*hiddenLayerErrors)[i].Dot(transposed, snd) // calculate the first layer of error
+	(*hiddenLayerErrors)[i] = Dot(transposed, snd) // calculate the first layer of error
 }
 
 // Study
@@ -258,13 +257,13 @@ func (n *Network) ForwardPropagate(input *Matrix) {
 }
 
 // Teach
-func (n *Network) FindErrors(evalTarget, wdlTarget *Matrix) []*Matrix {
+func (n *Network) FindErrors(evalTarget, wdlTarget float32) []*Matrix {
 	// Find layer costs
 	last := len(n.Neurons) - 1
-	errors := make([]*Matrix, last)
+	errors := make([]*Matrix, last+1)
 	errors[last] = CalculateCost(n.Neurons[last], evalTarget, wdlTarget)
-	for i := last - 1; i >= 0; i++ {
-		errorOfLayer(&errors, i, n.Weights[i+1], errors[i+1])
+	for i := last; i > 0; i-- {
+		errorOfLayer(&errors, 0, n.Weights[i], errors[i])
 	}
 
 	return errors
@@ -273,33 +272,30 @@ func (n *Network) FindErrors(evalTarget, wdlTarget *Matrix) []*Matrix {
 // Learn
 func (n *Network) BackPropagate(errors []*Matrix) {
 	last := len(n.Neurons) - 1
-	mat := FromTemplate(errors[last])
-	w := FromTemplate(n.Weights[last])
-	w.Apply(n.Weights[last], SigmoidPrime)
-	mat.Multiply(errors[last], w)
-	mat.Dot(mat, n.Neurons[last-1].T())
-	mat.Scale(mat, LearningRate)
-	n.Weights[last].Add(n.Weights[last], mat)
-
-	colWiseSum := EmptyMatrix(1, w.Cols)
-	colWiseSum.SumColumns(w)
-	colWiseSum.Scale(colWiseSum, LearningRate)
+	w := Apply(n.Neurons[last], SigmoidPrime)
+	n.Weights[last] = Add(n.Weights[last],
+		Scale(
+			Dot(
+				Multiply(errors[last], w),
+				n.Neurons[last-1].T()),
+			LearningRate,
+		),
+	)
+	colWiseSum := SumColumns(w)
 	n.Biases[last].Add(n.Biases[last], colWiseSum)
 
-	for i := last - 1; i >= 0; i++ {
-		mat = FromTemplate(errors[i])
-		w = FromTemplate(n.Weights[i])
-		w.Apply(n.Weights[i], ReLuPrime)
-		mat.Multiply(errors[i], w)
-		mat.Dot(mat, n.Neurons[i-1].T())
-		mat.Scale(mat, LearningRate)
-		n.Weights[i].Add(n.Weights[i], mat)
-
-		colWiseSum := EmptyMatrix(1, w.Cols)
-		colWiseSum.SumColumns(w)
-		colWiseSum.Scale(colWiseSum, LearningRate)
-		n.Biases[i].Add(n.Biases[i], colWiseSum)
-
+	for i := last - 1; i > 0; i-- {
+		w := Apply(n.Neurons[i], SigmoidPrime)
+		n.Weights[i] = Add(n.Weights[i],
+			Scale(
+				Dot(
+					Multiply(errors[i], w),
+					n.Neurons[i-1].T()),
+				LearningRate,
+			),
+		)
+		colWiseSum := SumColumns(w)
+		n.Biases[last].Add(n.Biases[i], colWiseSum)
 	}
 }
 

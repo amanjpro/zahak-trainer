@@ -62,12 +62,14 @@ func (t *Trainer) Train(path string) {
 		startTime := time.Now()
 		fmt.Printf("Started Epoch %d at %s\n", epoch, startTime.String())
 		fmt.Printf("Number of samples: %d\n", len(sample.Inputs))
+		totalCost := float32(0)
 		for _, index := range sample.Inputs {
 			data := t.Dataset[index]
 			// Study
 			t.Net.ForwardPropagate(t.Net.CreateInput(data.Input))
 			// Teach
 			errors := t.Net.FindErrors(data.Score, data.Outcome)
+			totalCost += errors[len(errors)-1].Data[0]
 			// Learn
 			t.Net.BackPropagate(errors)
 		}
@@ -75,5 +77,6 @@ func (t *Trainer) Train(path string) {
 		fmt.Printf("Storing This Epoch %d network\n", epoch)
 		t.Net.Save(fmt.Sprintf("%s%cepoch-%d.nnue", path, os.PathSeparator, epoch))
 		fmt.Printf("Stored This Epoch %d's network\n", epoch)
+		fmt.Printf("Current cost is: %f\n", totalCost)
 	}
 }
