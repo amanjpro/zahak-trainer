@@ -43,7 +43,7 @@ func LoadDataset(path string) []*Data {
 
 func ParseLine(line string) *Data {
 	parts := strings.Split(line, ";")
-	if len(parts) != 4 {
+	if len(parts) != 5 {
 		panic(fmt.Sprintf("Bad line %s\n", line))
 	}
 

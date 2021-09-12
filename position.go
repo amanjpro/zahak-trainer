@@ -29,7 +29,7 @@ type (
 // )
 
 const (
-	A1 Square = iota + 1
+	A1 Square = iota
 	B1
 	C1
 	D1
