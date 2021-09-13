@@ -2,7 +2,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"math/rand"
+	"os"
+	"runtime/pprof"
 	"strconv"
 	"strings"
 )
@@ -15,6 +18,7 @@ var (
 )
 
 func main() {
+	profile := flag.Bool("profile", false, "Profile the trainer")
 	epochs := flag.Int("epochs", DefaultNumberOfEpochs, "Number of epochs")
 	inputs := flag.Int("inputs", DefaultNumberOfInputs, "Number of inputs")
 	neurons := flag.String("hiddens", DefaultNumberOfHiddenNeurons, "Number of hidden neurons, for multi-layer you can send comma separated numbers")
@@ -28,6 +32,20 @@ func main() {
 
 	flag.Parse()
 
+	if *profile {
+		cpu, err := os.Create("zahak-trainer-cpu-profile")
+		if err != nil {
+			fmt.Println("could not create CPU profile: ", err)
+			os.Exit(1)
+		}
+		if err := pprof.StartCPUProfile(cpu); err != nil {
+			fmt.Println("could not start CPU profile: ", err)
+			os.Exit(1)
+		}
+		defer cpu.Close()
+		defer pprof.StopCPUProfile()
+
+	}
 	words := strings.Split(*neurons, ",")
 	if len(words) < 1 {
 		panic("At least one layer of hidden neurons are required")

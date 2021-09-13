@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"unsafe"
 )
 
 type (
@@ -16,14 +17,14 @@ type (
 	}
 )
 
-func LoadDataset(path string) []*Data {
+func LoadDataset(path string) *[]Data {
 	file, err := os.Open(path)
 	if err != nil {
 		panic(err)
 	}
 	defer file.Close()
 
-	data := make([]*Data, 0, 14_000_000)
+	data := make([]Data, 0, 58_671_054)
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -38,10 +39,13 @@ func LoadDataset(path string) []*Data {
 		panic(err)
 	}
 
-	return data
+	fmt.Println(unsafe.Sizeof(data))
+	fmt.Println(unsafe.Sizeof(data[0]), int(unsafe.Sizeof(data[0]))*len(data))
+
+	return &data
 }
 
-func ParseLine(line string) *Data {
+func ParseLine(line string) Data {
 	parts := strings.Split(line, ";")
 	if len(parts) != 5 {
 		panic(fmt.Sprintf("Bad line %s\n", line))
@@ -67,7 +71,7 @@ func ParseLine(line string) *Data {
 		panic(fmt.Sprintf("Bad line %s\n", line))
 	}
 
-	return &Data{
+	return Data{
 		Input:   pos,
 		Score:   Sigmoid(float32(score)),
 		Outcome: float32(outcome),

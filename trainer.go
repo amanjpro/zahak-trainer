@@ -14,7 +14,7 @@ type (
 
 	Trainer struct {
 		Net     Network
-		Dataset []*Data
+		Dataset *[]Data
 		Epochs  int
 	}
 )
@@ -28,7 +28,7 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func NewTrainer(net Network, dataset []*Data, epochs int) *Trainer {
+func NewTrainer(net Network, dataset *[]Data, epochs int) *Trainer {
 	return &Trainer{
 		Net:     net,
 		Dataset: dataset,
@@ -37,13 +37,13 @@ func NewTrainer(net Network, dataset []*Data, epochs int) *Trainer {
 }
 
 func (t *Trainer) getSample() Sample {
-	sampleSize := len(t.Dataset) / t.Epochs
+	sampleSize := len(*t.Dataset) / t.Epochs
 	var dummy struct{}
 	seen := make(map[int]struct{}, sampleSize)
 	sample := make([]int, sampleSize)
 	chosen := 0
 	for chosen < sampleSize {
-		candidate := rand.Intn(len(t.Dataset))
+		candidate := rand.Intn(len(*t.Dataset))
 		if _, ok := seen[candidate]; !ok {
 			seen[candidate] = dummy
 			sample[chosen] = candidate
@@ -61,20 +61,24 @@ func (t *Trainer) Train(path string) {
 		// sample := t.getSample()
 		startTime := time.Now()
 		fmt.Printf("Started Epoch %d at %s\n", epoch, startTime.String())
-		fmt.Printf("Number of samples: %d\n", len(t.Dataset))
+		fmt.Printf("Number of samples: %d\n", len(*t.Dataset))
 		totalCost := float32(0)
-		totalValidation := float32(0)
-		for _, data := range t.Dataset {
+		// totalValidation := float32(0)
+		for i := 0; i < len(*t.Dataset); i++ {
+			data := (*t.Dataset)[i]
 			input := t.Net.CreateInput(data.Input)
 			totalCost += t.Net.Train(input, data.Score, data.Outcome)
-			cost := CalculateCost(t.Net.Activations[len(t.Net.Activations)-1], data.Score, data.Outcome)
-			totalValidation += cost.Data[0]
+			if i%4048 == 0 {
+				fmt.Printf("Trained on %d samples\n", i)
+			}
+			// cost := CalculateCost(t.Net.Activations[len(t.Net.Activations)-1], data.Score, data.Outcome)
+			// totalValidation += cost.Data[0]
 		}
 		fmt.Printf("Finished Epoch %d at %s, elapsed time %s\n", epoch, time.Now().String(), time.Since(startTime).String())
 		fmt.Printf("Storing This Epoch %d network\n", epoch)
 		t.Net.Save(fmt.Sprintf("%s%cepoch-%d.nnue", path, os.PathSeparator, epoch))
 		fmt.Printf("Stored This Epoch %d's network\n", epoch)
-		fmt.Printf("Current cost is: %f\n", totalCost/float32(len(t.Dataset)))
-		fmt.Printf("Current validation is: %f\n", totalValidation/float32(len(t.Dataset)))
+		fmt.Printf("Current cost is: %f\n", totalCost/float32(len(*t.Dataset)))
+		// fmt.Printf("Current validation is: %f\n", totalValidation/float32(len(t.Dataset)))
 	}
 }

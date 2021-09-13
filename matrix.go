@@ -84,10 +84,13 @@ func (m *Matrix) Dot(fst, snd MatrixLike) {
 		fmt.Println(m.Rows, m.Cols, fst.GetRows(), fst.GetCols(), snd.GetRows(), snd.GetCols())
 		panic("Incompatible matrices for multiplication")
 	}
-	for i := uint32(0); i < fst.GetRows(); i++ {
-		for j := uint32(0); j < snd.GetCols(); j++ {
+	frows := fst.GetRows()
+	fcols := fst.GetCols()
+	scols := snd.GetCols()
+	for i := uint32(0); i < frows; i++ {
+		for j := uint32(0); j < scols; j++ {
 			m.Set(i, j, 0)
-			for k := uint32(0); k < fst.GetCols(); k++ {
+			for k := uint32(0); k < fcols; k++ {
 				m.AddTo(i, j, fst.Get(i, k)*snd.Get(k, j))
 			}
 		}
@@ -185,8 +188,10 @@ func (m *Matrix) Subtract(fst, snd MatrixLike) {
 		fmt.Println(m.Rows, m.Cols, fst.GetRows(), fst.GetCols(), snd.GetRows(), snd.GetCols())
 		panic("Bad sized matrices")
 	}
-	for i := uint32(0); i < fst.GetCols(); i++ {
-		for j := uint32(0); i < fst.GetRows(); i++ {
+	cols := fst.GetCols()
+	rows := fst.GetRows()
+	for i := uint32(0); i < cols; i++ {
+		for j := uint32(0); i < rows; i++ {
 			m.Data[i] = fst.Get(i, j) - snd.Get(i, j)
 		}
 	}
