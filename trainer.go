@@ -58,14 +58,13 @@ func (t *Trainer) getSample() Sample {
 
 func (t *Trainer) Train(path string) {
 	for epoch := 0; epoch < t.Epochs; epoch++ {
-		sample := t.getSample()
+		// sample := t.getSample()
 		startTime := time.Now()
 		fmt.Printf("Started Epoch %d at %s\n", epoch, startTime.String())
-		fmt.Printf("Number of samples: %d\n", len(sample.Inputs))
+		fmt.Printf("Number of samples: %d\n", len(t.Dataset))
 		totalCost := float32(0)
 		totalValidation := float32(0)
-		for _, index := range sample.Inputs {
-			data := t.Dataset[index]
+		for _, data := range t.Dataset {
 			input := t.Net.CreateInput(data.Input)
 			totalCost += t.Net.Train(input, data.Score, data.Outcome)
 			cost := CalculateCost(t.Net.Activations[len(t.Net.Activations)-1], data.Score, data.Outcome)
@@ -75,7 +74,7 @@ func (t *Trainer) Train(path string) {
 		fmt.Printf("Storing This Epoch %d network\n", epoch)
 		t.Net.Save(fmt.Sprintf("%s%cepoch-%d.nnue", path, os.PathSeparator, epoch))
 		fmt.Printf("Stored This Epoch %d's network\n", epoch)
-		fmt.Printf("Current cost is: %f\n", totalCost/float32(len(sample.Inputs)))
-		fmt.Printf("Current validation is: %f\n", totalValidation/float32(len(sample.Inputs)))
+		fmt.Printf("Current cost is: %f\n", totalCost/float32(len(t.Dataset)))
+		fmt.Printf("Current validation is: %f\n", totalValidation/float32(len(t.Dataset)))
 	}
 }
