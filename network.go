@@ -18,11 +18,11 @@ type (
 	}
 
 	Network struct {
-		Id       uint32
-		Topology Topology
-		Neurons  []*Matrix
-		Weights  []*Matrix
-		Biases   []*Matrix
+		Id          uint32
+		Topology    Topology
+		Activations []*Matrix
+		Weights     []*Matrix
+		Biases      []*Matrix
 	}
 )
 
@@ -41,13 +41,13 @@ func CreateNetwork(topology Topology, id uint32) (net Network) {
 		Id:       id,
 	}
 
-	net.Neurons = make([]*Matrix, len(topology.HiddenNeurons)+1)
+	net.Activations = make([]*Matrix, len(topology.HiddenNeurons)+1)
 	net.Weights = make([]*Matrix, len(topology.HiddenNeurons)+1)
 	net.Biases = make([]*Matrix, len(topology.HiddenNeurons)+1)
 
 	inputSize := topology.Inputs
 	i := 0
-	for ; i < len(net.Neurons); i++ {
+	for ; i < len(net.Activations); i++ {
 		var outputSize uint32
 		if i == len(topology.HiddenNeurons) {
 			outputSize = topology.Outputs
@@ -55,7 +55,7 @@ func CreateNetwork(topology Topology, id uint32) (net Network) {
 			outputSize = topology.HiddenNeurons[i]
 		}
 		net.Weights[i] = NewMatrix(outputSize, inputSize, randomArray(inputSize*outputSize, float32(topology.Inputs)))
-		net.Neurons[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
+		net.Activations[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
 		net.Biases[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
 		inputSize = outputSize
 	}
@@ -127,7 +127,7 @@ func (n *Network) Save(file string) {
 	}
 
 	buf = make([]byte, 4)
-	for i := 0; i < len(n.Neurons); i++ {
+	for i := 0; i < len(n.Activations); i++ {
 		weights := n.Weights[i].Data
 		for j := 0; j < len(weights); j++ {
 			binary.BigEndian.PutUint32(buf, math.Float32bits(weights[j]))
@@ -199,13 +199,13 @@ func Load(path string) Network {
 		Id:       id,
 	}
 
-	net.Neurons = make([]*Matrix, len(topology.HiddenNeurons)+1)
+	net.Activations = make([]*Matrix, len(topology.HiddenNeurons)+1)
 	net.Weights = make([]*Matrix, len(topology.HiddenNeurons)+1)
 	net.Biases = make([]*Matrix, len(topology.HiddenNeurons)+1)
 
 	buf = make([]byte, 4)
 	inputSize := topology.Inputs
-	for i := 0; i < len(net.Neurons); i++ {
+	for i := 0; i < len(net.Activations); i++ {
 		var outputSize uint32
 		if i == len(neurons) {
 			outputSize = outputs
@@ -232,71 +232,92 @@ func Load(path string) Network {
 			data[j] = math.Float32frombits(binary.BigEndian.Uint32(buf))
 		}
 		net.Biases[i] = SingletonMatrix(outputSize, data)
-		net.Neurons[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
+		net.Activations[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
 	}
 	return net
 }
 
 func errorOfLayer(hiddenLayerErrors *[]*Matrix, i int, fst, snd *Matrix) {
-	transposed := fst.T()
-	(*hiddenLayerErrors)[i] = Dot(transposed, snd) // calculate the first layer of error
 }
 
-// Study
-func (n *Network) ForwardPropagate(input *Matrix) {
-	n.Neurons[0].ForwardPropagate(input, n.Weights[0], n.Biases[0], ReLu)
+func (n *Network) Predict(input *Matrix) {
 
-	activation := ReLu
-	for i := 1; i < len(n.Neurons); i++ {
-		if i == len(n.Neurons)-1 {
-			activation = Sigmoid
+	activations := input
+	activationFn := ReLu
+	last := len(n.Activations) - 1
+	// for i := 0; i < len(n.Activations); i++ {
+	// 	if i != 0 {
+	// 		activations = n.Activations[i-1]
+	// 	}
+	// 	if i == last {
+	// 		activationFn = Sigmoid
+	// 	}
+	//
+	// 	n.Activations[i].Dot(n.Weights[i], activations)
+	// 	n.Activations[i].Add(n.Activations[i], n.Biases[i])
+	// 	n.Activations[i].Apply(n.Activations[i], activationFn)
+	// }
+
+	for i := 0; i < len(n.Activations); i++ {
+		if i != 0 {
+			activations = n.Activations[i-1]
+		}
+		if i == last {
+			activationFn = Sigmoid
 		}
 
-		n.Neurons[i].ForwardPropagate(n.Neurons[i-1], n.Weights[i], n.Biases[i], activation)
+		n.Activations[i].Dot(n.Weights[i], activations)
+		n.Activations[i].Add(n.Activations[i], n.Biases[i])
+		n.Activations[i].Apply(n.Activations[i], activationFn)
 	}
 }
 
-// Teach
-func (n *Network) FindErrors(evalTarget, wdlTarget float32) []*Matrix {
-	// Find layer costs
-	last := len(n.Neurons) - 1
-	errors := make([]*Matrix, last+1)
-	errors[last] = CalculateCost(n.Neurons[last], evalTarget, wdlTarget)
-	for i := last; i > 0; i-- {
-		errorOfLayer(&errors, 0, n.Weights[i], errors[i])
+func (n *Network) Train(input *Matrix, evalTarget, wdlTarget float32) float32 {
+
+	activations := input
+	activationFn := ReLu
+	last := len(n.Activations) - 1
+	for i := 0; i < len(n.Activations); i++ {
+		if i != 0 {
+			activations = n.Activations[i-1]
+		}
+		if i == last {
+			activationFn = Sigmoid
+		}
+
+		n.Activations[i].Dot(n.Weights[i], activations)
+		n.Activations[i].Add(n.Activations[i], n.Biases[i])
+		n.Activations[i].Apply(n.Activations[i], activationFn)
 	}
 
-	return errors
-}
+	errors := make([]*Matrix, len(n.Activations))
+	cost := CalculateCost(n.Activations[last], evalTarget, wdlTarget)
+	res := cost.Data[0]
+	for i := last; i >= 0; i-- {
+		var err *Matrix
+		if i == last {
+			err = cost
+		} else {
+			transposed := n.Weights[i+1].T()
+			err = Dot(transposed, errors[i+1])
+			err.Apply(err, ReLuPrime)
+		}
+		errors[i] = err
+		if i == 0 {
+			activations = input
+		} else {
+			activations = n.Activations[i-1]
+		}
+		gradient := Multiply(n.Activations[i], err)
+		gradient.Scale(gradient, LearningRate)
+		transposedInput := activations.T()
+		whoDelta := Dot(gradient, transposedInput)
 
-// Learn
-func (n *Network) BackPropagate(errors []*Matrix) {
-	last := len(n.Neurons) - 1
-	w := Apply(n.Neurons[last], SigmoidPrime)
-	n.Weights[last] = Add(n.Weights[last],
-		Scale(
-			Dot(
-				Multiply(errors[last], w),
-				n.Neurons[last-1].T()),
-			LearningRate,
-		),
-	)
-	colWiseSum := SumColumns(w)
-	n.Biases[last].Add(n.Biases[last], colWiseSum)
-
-	for i := last - 1; i > 0; i-- {
-		w := Apply(n.Neurons[i], SigmoidPrime)
-		n.Weights[i] = Add(n.Weights[i],
-			Scale(
-				Dot(
-					Multiply(errors[i], w),
-					n.Neurons[i-1].T()),
-				LearningRate,
-			),
-		)
-		colWiseSum := SumColumns(w)
-		n.Biases[last].Add(n.Biases[i], colWiseSum)
+		n.Weights[i].Add(n.Weights[i], whoDelta)
+		n.Biases[i].Add(n.Biases[i], gradient)
 	}
+
+	return res
 }
 
 // Helper functions

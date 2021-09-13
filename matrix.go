@@ -50,6 +50,7 @@ func (m *Matrix) Size() uint32 {
 
 func (m *Matrix) Get(row, col uint32) float32 {
 	if row >= m.Rows || col >= m.Cols {
+		fmt.Println("Bad Address", col, m.Cols, row, m.Rows)
 		panic("Bad Address")
 	}
 	return m.Data[col*m.Rows+row]
@@ -133,7 +134,7 @@ func (m *Matrix) SumColumns(mat *Matrix) {
 	for i := uint32(0); i < mat.Cols; i++ {
 		m.Data[i] = 0
 		for j := uint32(0); j < mat.Rows; j++ {
-			m.Data[i] += m.Get(j, i)
+			m.Data[i] += mat.Get(j, i)
 		}
 	}
 }
@@ -162,6 +163,7 @@ func (m *Matrix) Apply(mat *Matrix, fn func(float32) float32) {
 func (m *Matrix) AddAndApply(fst, snd *Matrix, fn func(float32) float32) {
 	if m.Cols != fst.Cols || m.Cols != snd.Cols ||
 		m.Rows != fst.Rows || m.Rows != snd.Rows {
+		fmt.Println(m.Rows, m.Cols, fst.GetRows(), fst.GetCols(), snd.GetRows(), snd.GetCols())
 		panic("Bad sized matrices")
 	}
 	for i := uint32(0); i < m.Size(); i++ {
@@ -177,19 +179,20 @@ func (m *Matrix) Add(fst, snd *Matrix) {
 	m.AddAndApply(fst, snd, identity)
 }
 
-func (m *Matrix) Subtract(fst, snd *Matrix) {
-	if m.Cols != fst.Cols || m.Cols != snd.Cols ||
-		m.Rows != fst.Rows || m.Rows != snd.Rows {
+func (m *Matrix) Subtract(fst, snd MatrixLike) {
+	if m.Cols != fst.GetCols() || m.Cols != snd.GetCols() ||
+		m.Rows != fst.GetRows() || m.Rows != snd.GetRows() {
+		fmt.Println(m.Rows, m.Cols, fst.GetRows(), fst.GetCols(), snd.GetRows(), snd.GetCols())
 		panic("Bad sized matrices")
 	}
-	for i := uint32(0); i < m.Size(); i++ {
-		m.Data[i] = fst.Data[i] - snd.Data[i]
+	for i := uint32(0); i < fst.GetCols(); i++ {
+		for j := uint32(0); i < fst.GetRows(); i++ {
+			m.Data[i] = fst.Get(i, j) - snd.Get(i, j)
+		}
 	}
 }
 
-func (output *Matrix) ForwardPropagate(input, weights, biases *Matrix, activation func(float32) float32) {
-	output.Dot(weights, input)
-	output.AddAndApply(output, biases, activation)
+func (output *Matrix) ForwardPropagate(input, weights, biases *Matrix, activationFn func(float32) float32) {
 }
 
 func Multiply(fst, snd *Matrix) *Matrix {
