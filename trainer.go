@@ -68,7 +68,7 @@ func (t *Trainer) Train(path string) {
 			input := data.Input.CreateInput(inputs)
 			totalCost += t.Net.Train(input, data.Score, data.Outcome)
 			if i%4048 == 0 {
-				fmt.Printf("\rTrained on %d samples\n", i)
+				fmt.Printf("\rTrained on %d samples", i)
 			}
 		}
 		fmt.Printf("Finished Epoch %d at %s, elapsed time %s\n", epoch, time.Now().String(), time.Since(startTime).String())
