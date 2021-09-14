@@ -29,9 +29,9 @@ func main() {
 	inputs := flag.Int("inputs", DefaultNumberOfInputs, "Number of inputs")
 	neurons := flag.String("hiddens", DefaultNumberOfHiddenNeurons, "Number of hidden neurons, for multi-layer you can send comma separated numbers")
 	outputs := flag.Int("outputs", DefaultNumberOfOutputs, "Number of outputs")
-	learningRate := flag.Float64("lr", LearningRate, "Learning Rate")
-	sigmoidScale := flag.Float64("sigmoid-scale", SigmoidScale, "Sigmoid scale")
-	networkId := flag.Int("network-id", rand.Int(), "A unique id for the network")
+	learningRate := flag.Float64("lr", float64(LearningRate), "Learning Rate")
+	sigmoidScale := flag.Float64("sigmoid-scale", float64(SigmoidScale), "Sigmoid scale")
+	networkId := flag.Int("network-id", int(uint32(rand.Int())), "A unique id for the network")
 	epdPath := flag.String("input-path", "", "Path to input dataset (FENs)")
 	startNet := flag.String("from-net", "", "Path to a network, to be used as a starting point")
 	binPath := flag.String("output-path", "", "Final NNUE path directory")
@@ -73,8 +73,8 @@ func main() {
 		network = CreateNetwork(topology, uint32(*networkId))
 	}
 
-	SigmoidScale = *sigmoidScale
-	LearningRate = *learningRate
+	SigmoidScale = float32(*sigmoidScale)
+	LearningRate = float32(*learningRate)
 
 	go http.ListenAndServe("localhost:8080", nil)
 	dataset := LoadDataset(*epdPath)

@@ -5,8 +5,6 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
-
-	"gonum.org/v1/gonum/mat"
 )
 
 type (
@@ -191,15 +189,15 @@ func FromFen(fen string) *Position {
 	return &pos
 }
 
-func (pos *Position) CreateInput(inputs uint32) *mat.Dense {
-	input := mat.NewDense(int(inputs), 1, nil)
+func (pos *Position) CreateInput(inputs uint32) Matrix {
+	input := EmptyMatrix(inputs, 1)
 
 	for j := 0; j < 64; j++ {
 		sq := Square(j)
 		piece := pos.PieceAt(sq)
 		if piece != NoPiece {
 			index := uint16(piece)*64 + uint16(sq)
-			input.Set(int(index), 0, 1)
+			input.Data[index] = 1
 		}
 	}
 

@@ -20,8 +20,8 @@ type (
 )
 
 var (
-	SigmoidScale float64 = 2.5 / 1024
-	LearningRate float64 = 0.01
+	SigmoidScale float32 = 2.5 / 1024
+	LearningRate float32 = 0.01
 )
 
 func init() {
@@ -59,10 +59,12 @@ func (t *Trainer) getSample() Sample {
 func (t *Trainer) Train(path string) {
 	inputs := t.Net.Topology.Inputs
 	for epoch := 0; epoch < t.Epochs; epoch++ {
+		// sample := t.getSample()
 		startTime := time.Now()
 		fmt.Printf("Started Epoch %d at %s\n", epoch, startTime.String())
 		fmt.Printf("Number of samples: %d\n", len(*t.Dataset))
-		totalCost := float64(0)
+		totalCost := float32(0)
+		// totalValidation := float32(0)
 		for i := 0; i < len(*t.Dataset); i++ {
 			data := (*t.Dataset)[i]
 			input := data.Input.CreateInput(inputs)
@@ -70,11 +72,14 @@ func (t *Trainer) Train(path string) {
 			if i%4048 == 0 {
 				fmt.Printf("\rTrained on %d samples", i)
 			}
+			// cost := CalculateCost(t.Net.Activations[len(t.Net.Activations)-1], data.Score, data.Outcome)
+			// totalValidation += cost.Data[0]
 		}
 		fmt.Printf("Finished Epoch %d at %s, elapsed time %s\n", epoch, time.Now().String(), time.Since(startTime).String())
 		fmt.Printf("Storing This Epoch %d network\n", epoch)
 		t.Net.Save(fmt.Sprintf("%s%cepoch-%d.nnue", path, os.PathSeparator, epoch))
 		fmt.Printf("Stored This Epoch %d's network\n", epoch)
-		fmt.Printf("Current cost is: %f\n", totalCost/float64(len(*t.Dataset)))
+		fmt.Printf("Current cost is: %f\n", totalCost/float32(len(*t.Dataset)))
+		// fmt.Printf("Current validation is: %f\n", totalValidation/float32(len(t.Dataset)))
 	}
 }
