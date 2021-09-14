@@ -12,8 +12,8 @@ import (
 type (
 	Data struct {
 		Input   *Position
-		Score   float32
-		Outcome float32
+		Score   float64
+		Outcome float64
 	}
 )
 
@@ -73,7 +73,7 @@ func ParseLine(line string) Data {
 
 	return Data{
 		Input:   pos,
-		Score:   Sigmoid(float32(score)),
-		Outcome: float32(outcome),
+		Score:   Sigmoid(0, 0, score),
+		Outcome: outcome,
 	}
 }

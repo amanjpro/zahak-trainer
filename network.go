@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 
+	"gonum.org/v1/gonum/mat"
 	"gonum.org/v1/gonum/stat/distuv"
 )
 
@@ -20,9 +21,9 @@ type (
 	Network struct {
 		Id          uint32
 		Topology    Topology
-		Activations []Matrix
-		Weights     []Matrix
-		Biases      []Matrix
+		Activations []*mat.Dense
+		Weights     []*mat.Dense
+		Biases      []*mat.Dense
 	}
 )
 
@@ -41,9 +42,9 @@ func CreateNetwork(topology Topology, id uint32) (net Network) {
 		Id:       id,
 	}
 
-	net.Activations = make([]Matrix, len(topology.HiddenNeurons)+1)
-	net.Weights = make([]Matrix, len(topology.HiddenNeurons)+1)
-	net.Biases = make([]Matrix, len(topology.HiddenNeurons)+1)
+	net.Activations = make([]*mat.Dense, len(topology.HiddenNeurons)+1)
+	net.Weights = make([]*mat.Dense, len(topology.HiddenNeurons)+1)
+	net.Biases = make([]*mat.Dense, len(topology.HiddenNeurons)+1)
 
 	inputSize := topology.Inputs
 	i := 0
@@ -54,9 +55,9 @@ func CreateNetwork(topology Topology, id uint32) (net Network) {
 		} else {
 			outputSize = topology.HiddenNeurons[i]
 		}
-		net.Weights[i] = NewMatrix(outputSize, inputSize, randomArray(inputSize*outputSize, float32(topology.Inputs)))
-		net.Activations[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
-		net.Biases[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
+		net.Weights[i] = mat.NewDense(int(outputSize), int(inputSize), randomArray(inputSize*outputSize, float64(topology.Inputs)))
+		net.Activations[i] = mat.NewDense(int(outputSize), 1, randomArray(outputSize, float64(topology.Inputs)))
+		net.Biases[i] = mat.NewDense(int(outputSize), 1, randomArray(outputSize, float64(topology.Inputs)))
 		inputSize = outputSize
 	}
 	return
@@ -113,18 +114,18 @@ func (n *Network) Save(file string) {
 
 	buf = make([]byte, 4)
 	for i := 0; i < len(n.Activations); i++ {
-		weights := n.Weights[i].Data
+		weights := n.Weights[i].RawMatrix().Data
 		for j := 0; j < len(weights); j++ {
-			binary.BigEndian.PutUint32(buf, math.Float32bits(weights[j]))
+			binary.BigEndian.PutUint32(buf, math.Float32bits(float32(weights[j])))
 			_, err := f.Write(buf)
 			if err != nil {
 				panic(err)
 			}
 		}
 
-		biases := n.Biases[i].Data
+		biases := n.Biases[i].RawMatrix().Data
 		for j := 0; j < len(biases); j++ {
-			binary.BigEndian.PutUint32(buf, math.Float32bits(biases[j]))
+			binary.BigEndian.PutUint32(buf, math.Float32bits(float32(biases[j])))
 			_, err := f.Write(buf)
 			if err != nil {
 				panic(err)
@@ -184,9 +185,9 @@ func Load(path string) Network {
 		Id:       id,
 	}
 
-	net.Activations = make([]Matrix, len(topology.HiddenNeurons)+1)
-	net.Weights = make([]Matrix, len(topology.HiddenNeurons)+1)
-	net.Biases = make([]Matrix, len(topology.HiddenNeurons)+1)
+	net.Activations = make([]*mat.Dense, len(topology.HiddenNeurons)+1)
+	net.Weights = make([]*mat.Dense, len(topology.HiddenNeurons)+1)
+	net.Biases = make([]*mat.Dense, len(topology.HiddenNeurons)+1)
 
 	buf = make([]byte, 4)
 	inputSize := topology.Inputs
@@ -197,32 +198,32 @@ func Load(path string) Network {
 		} else {
 			outputSize = neurons[i]
 		}
-		data := make([]float32, outputSize*inputSize)
+		data := make([]float64, outputSize*inputSize)
 		for j := 0; j < len(data); j++ {
 			_, err := io.ReadFull(f, buf)
 			if err != nil {
 				panic(err)
 			}
-			data[j] = math.Float32frombits(binary.BigEndian.Uint32(buf))
+			data[j] = float64(math.Float32frombits(binary.BigEndian.Uint32(buf)))
 		}
-		net.Weights[i] = NewMatrix(outputSize, inputSize, data)
+		net.Weights[i] = mat.NewDense(int(outputSize), int(inputSize), data)
 		inputSize = outputSize
 
-		data = make([]float32, outputSize)
+		data = make([]float64, outputSize)
 		for j := 0; j < len(data); j++ {
 			_, err := io.ReadFull(f, buf)
 			if err != nil {
 				panic(err)
 			}
-			data[j] = math.Float32frombits(binary.BigEndian.Uint32(buf))
+			data[j] = float64(math.Float32frombits(binary.BigEndian.Uint32(buf)))
 		}
-		net.Biases[i] = SingletonMatrix(outputSize, data)
-		net.Activations[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
+		net.Biases[i] = mat.NewDense(int(outputSize), 1, data)
+		net.Activations[i] = mat.NewDense(int(outputSize), 1, randomArray(outputSize, float64(topology.Inputs)))
 	}
 	return net
 }
 
-func (n *Network) Predict(input Matrix) {
+func (n *Network) Predict(input *mat.Dense) {
 
 	activations := input
 	activationFn := ReLu
@@ -236,13 +237,13 @@ func (n *Network) Predict(input Matrix) {
 			activationFn = Sigmoid
 		}
 
-		n.Activations[i].Dot(&n.Weights[i], &activations)
+		n.Activations[i].Product(n.Weights[i], activations)
 		n.Activations[i].Add(n.Activations[i], n.Biases[i])
-		n.Activations[i].Apply(n.Activations[i], activationFn)
+		n.Activations[i].Apply(activationFn, n.Activations[i])
 	}
 }
 
-func (n *Network) Train(input Matrix, evalTarget, wdlTarget float32) float32 {
+func (n *Network) Train(input *mat.Dense, evalTarget, wdlTarget float64) float64 {
 
 	activations := input
 	activationFn := ReLu
@@ -255,22 +256,22 @@ func (n *Network) Train(input Matrix, evalTarget, wdlTarget float32) float32 {
 			activationFn = Sigmoid
 		}
 
-		n.Activations[i].Dot(&n.Weights[i], &activations)
+		n.Activations[i].Product(n.Weights[i], activations)
 		n.Activations[i].Add(n.Activations[i], n.Biases[i])
-		n.Activations[i].Apply(n.Activations[i], activationFn)
+		n.Activations[i].Apply(activationFn, n.Activations[i])
 	}
 
-	errors := make([]Matrix, len(n.Activations))
+	errors := make([]*mat.Dense, len(n.Activations))
 	cost := CalculateCost(n.Activations[last], evalTarget, wdlTarget)
-	res := cost.Data[0]
+	res := cost.RawMatrix().Data[0]
 	for i := last; i >= 0; i-- {
-		var err Matrix
+		var err *mat.Dense
 		if i == last {
 			err = cost
 		} else {
 			transposed := n.Weights[i+1].T()
-			err = Dot(transposed, &errors[i+1])
-			err.Apply(err, ReLuPrime)
+			err = Dot(transposed, errors[i+1])
+			err.Apply(ReLuPrime, err)
 		}
 		errors[i] = err
 		if i == 0 {
@@ -279,9 +280,9 @@ func (n *Network) Train(input Matrix, evalTarget, wdlTarget float32) float32 {
 			activations = n.Activations[i-1]
 		}
 		gradient := Multiply(n.Activations[i], err)
-		gradient.Scale(gradient, LearningRate)
+		gradient.Scale(LearningRate, gradient)
 		transposedInput := activations.T()
-		whoDelta := Dot(&gradient, transposedInput)
+		whoDelta := Dot(gradient, transposedInput)
 
 		n.Weights[i].Add(n.Weights[i], whoDelta)
 		n.Biases[i].Add(n.Biases[i], gradient)
@@ -292,16 +293,16 @@ func (n *Network) Train(input Matrix, evalTarget, wdlTarget float32) float32 {
 
 // Helper functions
 // randomly generate a float64 array
-func randomArray(size uint32, v float32) (data []float32) {
+func randomArray(size uint32, v float64) (data []float64) {
 	dist := distuv.Uniform{
-		Min: -1 / math.Sqrt(float64(v)),
-		Max: 1 / math.Sqrt(float64(v)),
+		Min: -1 / math.Sqrt(v),
+		Max: 1 / math.Sqrt(v),
 	}
 
-	data = make([]float32, size)
+	data = make([]float64, size)
 	for i := uint32(0); i < size; i++ {
 		// data[i] = rand.NormFloat64() * math.Pow(v, -0.5)
-		data[i] = float32(dist.Rand())
+		data[i] = dist.Rand()
 	}
 	return
 }
