@@ -222,48 +222,58 @@ func Load(path string) Network {
 	return net
 }
 
-func (n *Network) Predict(input Matrix) {
+func (n *Network) Predict(p *Position, evalTarget, wdlTarget float32) {
 
-	activations := input
+	input := p.Activations
 	activationFn := ReLu
+	// apply input layer
+	n.Activations[0].Reset()
+	for s, p := range input {
+
+		if p != NoPiece {
+			i := toPieceSquareIndex(p, Square(s))
+
+			for j := uint32(0); j < n.Activations[0].Size(); j++ {
+				n.Activations[0].Data[j] += n.Weights[0].Get(j, uint32(i))
+			}
+		}
+
+		for j := uint32(0); j < n.Activations[0].Size(); j++ {
+			n.Activations[0].Data[j] = activationFn(n.Activations[0].Data[j] + n.Biases[0].Data[j])
+		}
+	}
 	last := len(n.Activations) - 1
 
-	for i := 0; i < len(n.Activations); i++ {
-		if i != 0 {
-			activations = n.Activations[i-1]
-		}
+	for i := 1; i < len(n.Activations); i++ {
 		if i == last {
 			activationFn = Sigmoid
 		}
 
-		n.Activations[i].Dot(&n.Weights[i], &activations)
-		n.Activations[i].Add(n.Activations[i], n.Biases[i])
-		n.Activations[i].Apply(n.Activations[i], activationFn)
+		n.Activations[i].Reset()
+
+		for j := uint32(0); j < n.Activations[i].Size(); j++ {
+			for k := uint32(0); k < n.Activations[i-1].Size(); k++ {
+				n.Activations[i].Data[j] += n.Activations[i-1].Data[k] * n.Weights[i].Get(j, k)
+			}
+
+			n.Activations[i].Data[j] = activationFn(n.Activations[i].Data[j] * n.Biases[i].Data[j])
+		}
 	}
 }
 
-func (n *Network) Train(input Matrix, evalTarget, wdlTarget float32) float32 {
+func toPieceSquareIndex(piece Piece, square Square) int {
+	return int(piece)*64 + int(square)
+}
 
-	activations := input
-	activationFn := ReLu
+func (n *Network) Train(p *Position, evalTarget, wdlTarget float32) float32 {
+
+	n.Predict(p, evalTarget, wdlTarget)
+
 	last := len(n.Activations) - 1
-	for i := 0; i < len(n.Activations); i++ {
-		if i != 0 {
-			activations = n.Activations[i-1]
-		}
-		if i == last {
-			activationFn = Sigmoid
-		}
-
-		n.Activations[i].Dot(&n.Weights[i], &activations)
-		n.Activations[i].Add(n.Activations[i], n.Biases[i])
-		n.Activations[i].Apply(n.Activations[i], activationFn)
-	}
-
 	errors := make([]Matrix, len(n.Activations))
 	cost := CalculateCost(n.Activations[last], evalTarget, wdlTarget)
 	res := cost.Data[0]
-	for i := last; i >= 0; i-- {
+	for i := last; i > 0; i-- {
 		var err Matrix
 		if i == last {
 			err = cost
@@ -273,11 +283,7 @@ func (n *Network) Train(input Matrix, evalTarget, wdlTarget float32) float32 {
 			err.Apply(err, ReLuPrime)
 		}
 		errors[i] = err
-		if i == 0 {
-			activations = input
-		} else {
-			activations = n.Activations[i-1]
-		}
+		activations := n.Activations[i-1]
 		gradient := Multiply(n.Activations[i], err)
 		gradient.Scale(gradient, LearningRate)
 		transposedInput := activations.T()

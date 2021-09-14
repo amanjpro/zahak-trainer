@@ -57,7 +57,7 @@ func (t *Trainer) getSample() Sample {
 }
 
 func (t *Trainer) Train(path string) {
-	inputs := t.Net.Topology.Inputs
+	// inputs := t.Net.Topology.Inputs
 	for epoch := 0; epoch < t.Epochs; epoch++ {
 		// sample := t.getSample()
 		startTime := time.Now()
@@ -67,8 +67,7 @@ func (t *Trainer) Train(path string) {
 		// totalValidation := float32(0)
 		for i := 0; i < len(*t.Dataset); i++ {
 			data := (*t.Dataset)[i]
-			input := data.Input.CreateInput(inputs)
-			totalCost += t.Net.Train(input, data.Score, data.Outcome)
+			totalCost += t.Net.Train(data.Input, data.Score, data.Outcome)
 			if i%4048 == 0 {
 				fmt.Printf("\rTrained on %d samples", i)
 			}

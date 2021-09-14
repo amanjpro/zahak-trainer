@@ -14,7 +14,7 @@ type (
 	Square      uint8
 	PositionTag uint8
 	Position    struct {
-		Squares [64]Piece
+		Activations [64]Piece
 		// Tags    PositionTag
 	}
 )
@@ -163,7 +163,9 @@ func FromFen(fen string) *Position {
 		panic(fmt.Sprintf("Expected 6 parts of the FEN, got %s\n", fen))
 	}
 
-	pos := Position{}
+	pos := Position{
+		// Activations: make([]int, 0, 32),
+	}
 
 	rank := 0
 	boardIndex := A8
@@ -178,7 +180,7 @@ func FromFen(fen string) *Position {
 			boardIndex = ranks[rank]
 			continue
 		} else if p := pieceFromName(ch); p != NoPiece {
-			pos.AddPiece(boardIndex, p)
+			pos.Activations[boardIndex] = p
 			boardIndex++
 		} else {
 			panic(fmt.Sprintf("Invalid FEN notation %s, boardIndex == %d, parsing %s\n",
@@ -187,31 +189,4 @@ func FromFen(fen string) *Position {
 	}
 
 	return &pos
-}
-
-func (pos *Position) CreateInput(inputs uint32) Matrix {
-	input := EmptyMatrix(inputs, 1)
-
-	for j := 0; j < 64; j++ {
-		sq := Square(j)
-		piece := pos.PieceAt(sq)
-		if piece != NoPiece {
-			index := uint16(piece)*64 + uint16(sq)
-			input.Data[index] = 1
-		}
-	}
-
-	return input
-}
-
-func (p *Position) AddPiece(sq Square, piece Piece) {
-	p.Squares[sq] = piece
-}
-
-func (p *Position) RemovePiece(sq Square) {
-	p.Squares[sq] = NoPiece
-}
-
-func (p *Position) PieceAt(sq Square) Piece {
-	return p.Squares[sq]
 }

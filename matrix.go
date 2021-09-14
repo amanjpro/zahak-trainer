@@ -52,6 +52,12 @@ func (m *Matrix) Get(row, col uint32) float32 {
 	return m.Data[col*m.Rows+row]
 }
 
+func (m *Matrix) Reset() {
+	for i := uint32(0); i < m.Size(); i++ {
+		m.Data[i] = 0
+	}
+}
+
 func (m *Matrix) Set(row, col uint32, v float32) {
 	if row >= m.Rows || col >= m.Cols {
 		fmt.Println(m.Rows, row, m.Cols, col)
