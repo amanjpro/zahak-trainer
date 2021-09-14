@@ -20,28 +20,24 @@ type (
 	}
 )
 
-func SingletonMatrix(rows uint32, data []float32) *Matrix {
+func SingletonMatrix(rows uint32, data []float32) Matrix {
 	return NewMatrix(rows, 1, data)
 }
 
-func NewMatrix(rows, cols uint32, data []float32) *Matrix {
+func NewMatrix(rows, cols uint32, data []float32) Matrix {
 	if len(data) != int(rows*cols) {
 		panic("Wrong matrix dimensions")
 	}
 
-	return &Matrix{
+	return Matrix{
 		Data: data,
 		Rows: rows,
 		Cols: cols,
 	}
 }
 
-func EmptyMatrix(rows, cols uint32) *Matrix {
+func EmptyMatrix(rows, cols uint32) Matrix {
 	return NewMatrix(rows, cols, make([]float32, rows*cols))
-}
-
-func FromTemplate(mat *Matrix) *Matrix {
-	return NewMatrix(mat.Rows, mat.Cols, make([]float32, mat.Size()))
 }
 
 func (m *Matrix) Size() uint32 {
@@ -130,7 +126,7 @@ func (m *Transposed) Get(row, col uint32) float32 {
 // 	return acc / float32(m.Size())
 // }
 
-func (m *Matrix) SumColumns(mat *Matrix) {
+func (m *Matrix) SumColumns(mat Matrix) {
 	if m.Cols != mat.Cols {
 		panic("Cannot fit mat in m")
 	}
@@ -142,11 +138,11 @@ func (m *Matrix) SumColumns(mat *Matrix) {
 	}
 }
 
-func (m *Matrix) Scale(mat *Matrix, scaleFactor float32) {
+func (m *Matrix) Scale(mat Matrix, scaleFactor float32) {
 	m.Apply(mat, func(x float32) float32 { return x * scaleFactor })
 }
 
-func (m *Matrix) Multiply(fst *Matrix, snd *Matrix) {
+func (m *Matrix) Multiply(fst Matrix, snd Matrix) {
 	if m.Cols != fst.Cols || m.Cols != snd.Cols ||
 		m.Rows != fst.Rows || m.Rows != snd.Rows {
 		fmt.Println(m.Rows, m.Cols, fst.GetRows(), fst.GetCols(), snd.GetRows(), snd.GetCols())
@@ -157,13 +153,13 @@ func (m *Matrix) Multiply(fst *Matrix, snd *Matrix) {
 	}
 }
 
-func (m *Matrix) Apply(mat *Matrix, fn func(float32) float32) {
+func (m *Matrix) Apply(mat Matrix, fn func(float32) float32) {
 	for i := uint32(0); i < m.Size(); i++ {
 		m.Data[i] = fn(mat.Data[i])
 	}
 }
 
-func (m *Matrix) AddAndApply(fst, snd *Matrix, fn func(float32) float32) {
+func (m *Matrix) AddAndApply(fst, snd Matrix, fn func(float32) float32) {
 	if m.Cols != fst.Cols || m.Cols != snd.Cols ||
 		m.Rows != fst.Rows || m.Rows != snd.Rows {
 		fmt.Println(m.Rows, m.Cols, fst.GetRows(), fst.GetCols(), snd.GetRows(), snd.GetCols())
@@ -174,7 +170,7 @@ func (m *Matrix) AddAndApply(fst, snd *Matrix, fn func(float32) float32) {
 	}
 }
 
-func (m *Matrix) Add(fst, snd *Matrix) {
+func (m *Matrix) Add(fst, snd Matrix) {
 	identity := func(x float32) float32 {
 		return x
 	}
@@ -197,50 +193,47 @@ func (m *Matrix) Subtract(fst, snd MatrixLike) {
 	}
 }
 
-func (output *Matrix) ForwardPropagate(input, weights, biases *Matrix, activationFn func(float32) float32) {
-}
-
-func Multiply(fst, snd *Matrix) *Matrix {
-	m := FromTemplate(fst)
+func Multiply(fst, snd Matrix) Matrix {
+	m := EmptyMatrix(fst.Rows, fst.Cols)
 	m.Multiply(fst, snd)
 	return m
 }
 
-func Add(fst, snd *Matrix) *Matrix {
-	m := FromTemplate(fst)
+func Add(fst, snd Matrix) Matrix {
+	m := EmptyMatrix(fst.Rows, fst.Cols)
 	m.Add(fst, snd)
 	return m
 }
 
-func Subtract(fst, snd *Matrix) *Matrix {
-	m := FromTemplate(fst)
-	m.Subtract(fst, snd)
+func Subtract(fst, snd Matrix) Matrix {
+	m := EmptyMatrix(fst.Rows, fst.Cols)
+	m.Subtract(&fst, &snd)
 	return m
 }
 
-func Apply(fst *Matrix, fn func(x float32) float32) *Matrix {
-	m := FromTemplate(fst)
+func Apply(fst Matrix, fn func(x float32) float32) Matrix {
+	m := EmptyMatrix(fst.Rows, fst.Cols)
 	m.Apply(fst, fn)
 	return m
 }
 
-func AddAndApply(fst, snd *Matrix, fn func(x float32) float32) *Matrix {
-	m := FromTemplate(fst)
+func AddAndApply(fst, snd Matrix, fn func(x float32) float32) Matrix {
+	m := EmptyMatrix(fst.Rows, fst.Cols)
 	m.AddAndApply(fst, snd, fn)
 	return m
 }
 
-func Dot(fst, snd MatrixLike) *Matrix {
+func Dot(fst, snd MatrixLike) Matrix {
 	m := EmptyMatrix(fst.GetRows(), snd.GetCols())
 	m.Dot(fst, snd)
 	return m
 }
 
-func SumColumns(mat *Matrix) *Matrix {
+func SumColumns(mat Matrix) Matrix {
 	m := EmptyMatrix(1, mat.GetCols())
 	m.SumColumns(mat)
 	return m
 }
-func Scale(mat *Matrix, scaleFactor float32) *Matrix {
+func Scale(mat Matrix, scaleFactor float32) Matrix {
 	return Apply(mat, func(x float32) float32 { return x * scaleFactor })
 }

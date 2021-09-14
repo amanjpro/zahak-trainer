@@ -29,7 +29,7 @@ func ReLuPrime(x float32) float32 {
 	return 0.0
 }
 
-func CalculateCost(output *Matrix, evalTarget, wdlTarget float32) *Matrix {
+func CalculateCost(output Matrix, evalTarget, wdlTarget float32) Matrix {
 	fn := func(x float32) float32 {
 		return (2.0*CostEvalWeight*(x-evalTarget) + 2.0*CostWDLWeight*(x-wdlTarget)) * SigmoidPrime(x)
 	}

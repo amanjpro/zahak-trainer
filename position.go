@@ -155,7 +155,9 @@ func pieceFromName(name rune) Piece {
 	return NoPiece
 }
 
-func FromFen(fen string) Position {
+var ranks = []Square{A8, A7, A6, A5, A4, A3, A2, A1}
+
+func FromFen(fen string) *Position {
 	words := strings.Split(fen, " ")
 	if len(words) != 6 {
 		panic(fmt.Sprintf("Expected 6 parts of the FEN, got %s\n", fen))
@@ -163,7 +165,6 @@ func FromFen(fen string) Position {
 
 	pos := Position{}
 
-	ranks := []Square{A8, A7, A6, A5, A4, A3, A2, A1}
 	rank := 0
 	boardIndex := A8
 	for _, ch := range words[0] {
@@ -185,7 +186,22 @@ func FromFen(fen string) Position {
 		}
 	}
 
-	return pos
+	return &pos
+}
+
+func (pos *Position) CreateInput(inputs uint32) Matrix {
+	input := EmptyMatrix(inputs, 1)
+
+	for j := 0; j < 64; j++ {
+		sq := Square(j)
+		piece := pos.PieceAt(sq)
+		if piece != NoPiece {
+			index := uint16(piece)*64 + uint16(sq)
+			input.Data[index] = 1
+		}
+	}
+
+	return input
 }
 
 func (p *Position) AddPiece(sq Square, piece Piece) {

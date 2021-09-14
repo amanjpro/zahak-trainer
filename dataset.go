@@ -11,7 +11,7 @@ import (
 
 type (
 	Data struct {
-		Input   Position
+		Input   *Position
 		Score   float32
 		Outcome float32
 	}

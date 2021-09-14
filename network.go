@@ -20,9 +20,9 @@ type (
 	Network struct {
 		Id          uint32
 		Topology    Topology
-		Activations []*Matrix
-		Weights     []*Matrix
-		Biases      []*Matrix
+		Activations []Matrix
+		Weights     []Matrix
+		Biases      []Matrix
 	}
 )
 
@@ -41,9 +41,9 @@ func CreateNetwork(topology Topology, id uint32) (net Network) {
 		Id:       id,
 	}
 
-	net.Activations = make([]*Matrix, len(topology.HiddenNeurons)+1)
-	net.Weights = make([]*Matrix, len(topology.HiddenNeurons)+1)
-	net.Biases = make([]*Matrix, len(topology.HiddenNeurons)+1)
+	net.Activations = make([]Matrix, len(topology.HiddenNeurons)+1)
+	net.Weights = make([]Matrix, len(topology.HiddenNeurons)+1)
+	net.Biases = make([]Matrix, len(topology.HiddenNeurons)+1)
 
 	inputSize := topology.Inputs
 	i := 0
@@ -60,21 +60,6 @@ func CreateNetwork(topology Topology, id uint32) (net Network) {
 		inputSize = outputSize
 	}
 	return
-}
-
-func (net *Network) CreateInput(position Position) *Matrix {
-	input := EmptyMatrix(net.Topology.Inputs, 1)
-
-	for j := 0; j < 64; j++ {
-		sq := Square(j)
-		piece := position.PieceAt(sq)
-		if piece != NoPiece {
-			index := uint16(piece)*64 + uint16(sq)
-			input.Data[index] = 1
-		}
-	}
-
-	return input
 }
 
 // Binary specification for the NNUE file:
@@ -199,9 +184,9 @@ func Load(path string) Network {
 		Id:       id,
 	}
 
-	net.Activations = make([]*Matrix, len(topology.HiddenNeurons)+1)
-	net.Weights = make([]*Matrix, len(topology.HiddenNeurons)+1)
-	net.Biases = make([]*Matrix, len(topology.HiddenNeurons)+1)
+	net.Activations = make([]Matrix, len(topology.HiddenNeurons)+1)
+	net.Weights = make([]Matrix, len(topology.HiddenNeurons)+1)
+	net.Biases = make([]Matrix, len(topology.HiddenNeurons)+1)
 
 	buf = make([]byte, 4)
 	inputSize := topology.Inputs
@@ -237,26 +222,11 @@ func Load(path string) Network {
 	return net
 }
 
-func errorOfLayer(hiddenLayerErrors *[]*Matrix, i int, fst, snd *Matrix) {
-}
-
-func (n *Network) Predict(input *Matrix) {
+func (n *Network) Predict(input Matrix) {
 
 	activations := input
 	activationFn := ReLu
 	last := len(n.Activations) - 1
-	// for i := 0; i < len(n.Activations); i++ {
-	// 	if i != 0 {
-	// 		activations = n.Activations[i-1]
-	// 	}
-	// 	if i == last {
-	// 		activationFn = Sigmoid
-	// 	}
-	//
-	// 	n.Activations[i].Dot(n.Weights[i], activations)
-	// 	n.Activations[i].Add(n.Activations[i], n.Biases[i])
-	// 	n.Activations[i].Apply(n.Activations[i], activationFn)
-	// }
 
 	for i := 0; i < len(n.Activations); i++ {
 		if i != 0 {
@@ -266,13 +236,13 @@ func (n *Network) Predict(input *Matrix) {
 			activationFn = Sigmoid
 		}
 
-		n.Activations[i].Dot(n.Weights[i], activations)
+		n.Activations[i].Dot(&n.Weights[i], &activations)
 		n.Activations[i].Add(n.Activations[i], n.Biases[i])
 		n.Activations[i].Apply(n.Activations[i], activationFn)
 	}
 }
 
-func (n *Network) Train(input *Matrix, evalTarget, wdlTarget float32) float32 {
+func (n *Network) Train(input Matrix, evalTarget, wdlTarget float32) float32 {
 
 	activations := input
 	activationFn := ReLu
@@ -285,21 +255,21 @@ func (n *Network) Train(input *Matrix, evalTarget, wdlTarget float32) float32 {
 			activationFn = Sigmoid
 		}
 
-		n.Activations[i].Dot(n.Weights[i], activations)
+		n.Activations[i].Dot(&n.Weights[i], &activations)
 		n.Activations[i].Add(n.Activations[i], n.Biases[i])
 		n.Activations[i].Apply(n.Activations[i], activationFn)
 	}
 
-	errors := make([]*Matrix, len(n.Activations))
+	errors := make([]Matrix, len(n.Activations))
 	cost := CalculateCost(n.Activations[last], evalTarget, wdlTarget)
 	res := cost.Data[0]
 	for i := last; i >= 0; i-- {
-		var err *Matrix
+		var err Matrix
 		if i == last {
 			err = cost
 		} else {
 			transposed := n.Weights[i+1].T()
-			err = Dot(transposed, errors[i+1])
+			err = Dot(transposed, &errors[i+1])
 			err.Apply(err, ReLuPrime)
 		}
 		errors[i] = err
@@ -311,7 +281,7 @@ func (n *Network) Train(input *Matrix, evalTarget, wdlTarget float32) float32 {
 		gradient := Multiply(n.Activations[i], err)
 		gradient.Scale(gradient, LearningRate)
 		transposedInput := activations.T()
-		whoDelta := Dot(gradient, transposedInput)
+		whoDelta := Dot(&gradient, transposedInput)
 
 		n.Weights[i].Add(n.Weights[i], whoDelta)
 		n.Biases[i].Add(n.Biases[i], gradient)
