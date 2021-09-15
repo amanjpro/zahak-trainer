@@ -155,11 +155,11 @@ func (t *Trainer) Train(path string) {
 		t.Costs[epoch] = t.PrintCost()
 	}
 
+	fmt.Println("Validation cost progression")
+	fmt.Println("======================================================")
 	for epoch := 0; epoch < t.Epochs; epoch++ {
-		fmt.Println("Validation cost progression")
-		fmt.Println("======================================================")
 		fmt.Println("Epoch\t\t\t\tValidation Cost")
-		fmt.Printf("%d\t\t\t\t%f", epoch, t.Costs[epoch])
-		fmt.Println("======================================================")
+		fmt.Printf("%d\t\t\t\t%f\n", epoch, t.Costs[epoch])
 	}
+	fmt.Println("======================================================")
 }
