@@ -43,11 +43,12 @@ func NewTrainer(net Network, dataset *[]Data, epochs int) *Trainer {
 }
 
 func (t *Trainer) PrintCost() {
+	fmt.Printf("Starting the validation of the Epoch\n")
 	totalCost := float32(0)
 	for i := 0; i < len(*t.Validation); i++ {
 		data := (*t.Training)[i]
 		predicted := t.Net.Predict(data.Input)
-		totalCost += CalculateCostGradient(predicted, data.Score, data.Outcome) * SigmoidPrime(predicted)
+		totalCost += ValidationCost(predicted, data.Score, data.Outcome)
 	}
 	fmt.Printf("Current cost is: %f\n", totalCost/float32(len(*t.Validation)))
 }
@@ -74,7 +75,7 @@ func (t *Trainer) Train(path string) {
 				fmt.Printf("\rTrained on %d samples [ %f samples / second ]", i, speed)
 			}
 		}
-		fmt.Printf("Finished Epoch %d at %s, elapsed time %s\n", epoch, time.Now().String(), time.Since(startTime).String())
+		fmt.Printf("\nFinished Epoch %d at %s, elapsed time %s\n", epoch, time.Now().String(), time.Since(startTime).String())
 		fmt.Printf("Storing This Epoch %d network\n", epoch)
 		t.Net.Save(fmt.Sprintf("%s%cepoch-%d.nnue", path, os.PathSeparator, epoch))
 		fmt.Printf("Stored This Epoch %d's network\n", epoch)

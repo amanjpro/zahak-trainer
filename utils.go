@@ -32,3 +32,8 @@ func ReLuPrime(x float32) float32 {
 func CalculateCostGradient(output, evalTarget, wdlTarget float32) float32 {
 	return 2.0*CostEvalWeight*(output-evalTarget) + 2.0*CostWDLWeight*(output-wdlTarget)
 }
+
+func ValidationCost(output, evalTarget, wdlTarget float32) float32 {
+	return CostEvalWeight*float32(math.Pow(float64(output-evalTarget), 2.0)) +
+		CostWDLWeight*float32(math.Pow(float64(output-wdlTarget), 2.0))
+}
