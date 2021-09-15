@@ -13,15 +13,17 @@ type (
 	}
 
 	Trainer struct {
-		Net     Network
-		Dataset *[]Data
-		Epochs  int
+		Net        Network
+		Training   *[]Data
+		Validation *[]Data
+		Epochs     int
 	}
 )
 
 var (
 	SigmoidScale float32 = 2.5 / 1024
 	LearningRate float32 = 0.01
+	BatchSize            = 16384
 )
 
 func init() {
@@ -29,31 +31,25 @@ func init() {
 }
 
 func NewTrainer(net Network, dataset *[]Data, epochs int) *Trainer {
+	upperEnd := 80 * len(*dataset) / 100
+	training := (*dataset)[:upperEnd]
+	validation := (*dataset)[upperEnd:]
 	return &Trainer{
-		Net:     net,
-		Dataset: dataset,
-		Epochs:  epochs,
+		Net:        net,
+		Training:   &training,
+		Validation: &validation,
+		Epochs:     epochs,
 	}
 }
 
-func (t *Trainer) getSample() Sample {
-	sampleSize := len(*t.Dataset) / t.Epochs
-	var dummy struct{}
-	seen := make(map[int]struct{}, sampleSize)
-	sample := make([]int, sampleSize)
-	chosen := 0
-	for chosen < sampleSize {
-		candidate := rand.Intn(len(*t.Dataset))
-		if _, ok := seen[candidate]; !ok {
-			seen[candidate] = dummy
-			sample[chosen] = candidate
-			chosen += 1
-		}
+func (t *Trainer) PrintCost() {
+	totalCost := float32(0)
+	for i := 0; i < len(*t.Validation); i++ {
+		data := (*t.Training)[i]
+		predicted := t.Net.Predict(data.Input)
+		totalCost += CalculateCostGradient(predicted, data.Score, data.Outcome) * SigmoidPrime(predicted)
 	}
-
-	return Sample{
-		Inputs: sample,
-	}
+	fmt.Printf("Current cost is: %f\n", totalCost/float32(len(*t.Validation)))
 }
 
 func (t *Trainer) Train(path string) {
@@ -62,23 +58,26 @@ func (t *Trainer) Train(path string) {
 		// sample := t.getSample()
 		startTime := time.Now()
 		fmt.Printf("Started Epoch %d at %s\n", epoch, startTime.String())
-		fmt.Printf("Number of samples: %d\n", len(*t.Dataset))
-		totalCost := float32(0)
+		fmt.Printf("Number of samples: %d\n", len(*t.Training))
 		// totalValidation := float32(0)
-		for i := 0; i < len(*t.Dataset); i++ {
-			data := (*t.Dataset)[i]
-			totalCost += t.Net.Train(data.Input, data.Score, data.Outcome)
-			if i%4048 == 0 {
-				fmt.Printf("\rTrained on %d samples", i)
+		trainedSamplesInBatch := 0
+		for i := 0; i < len(*t.Training); i++ {
+			if trainedSamplesInBatch == BatchSize {
+				trainedSamplesInBatch = 0
+				t.Net.ApplyGradients()
 			}
-			// cost := CalculateCost(t.Net.Activations[len(t.Net.Activations)-1], data.Score, data.Outcome)
-			// totalValidation += cost.Data[0]
+			trainedSamplesInBatch += 1
+			data := (*t.Training)[i]
+			t.Net.Train(data.Input, data.Score, data.Outcome)
+			if i%4048 == 0 {
+				speed := float64(i) / time.Since(startTime).Seconds()
+				fmt.Printf("\rTrained on %d samples [ %f samples / second ]", i, speed)
+			}
 		}
 		fmt.Printf("Finished Epoch %d at %s, elapsed time %s\n", epoch, time.Now().String(), time.Since(startTime).String())
 		fmt.Printf("Storing This Epoch %d network\n", epoch)
 		t.Net.Save(fmt.Sprintf("%s%cepoch-%d.nnue", path, os.PathSeparator, epoch))
 		fmt.Printf("Stored This Epoch %d's network\n", epoch)
-		fmt.Printf("Current cost is: %f\n", totalCost/float32(len(*t.Dataset)))
-		// fmt.Printf("Current validation is: %f\n", totalValidation/float32(len(t.Dataset)))
+		t.PrintCost()
 	}
 }

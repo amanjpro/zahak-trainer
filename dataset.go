@@ -3,10 +3,10 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"strings"
-	"unsafe"
 )
 
 type (
@@ -39,9 +39,6 @@ func LoadDataset(path string) *[]Data {
 		panic(err)
 	}
 
-	fmt.Println(unsafe.Sizeof(data))
-	fmt.Println(unsafe.Sizeof(data[0]), int(unsafe.Sizeof(data[0]))*len(data))
-
 	return &data
 }
 
@@ -61,6 +58,8 @@ func ParseLine(line string) Data {
 	if err != nil {
 		panic(fmt.Sprintf("Bad line %s\n", line))
 	}
+
+	score = math.Max(math.Min(score, 2000), -2000)
 
 	outcomePart := strings.Split(parts[3], ":")
 	if len(outcomePart) != 2 {

@@ -20,9 +20,12 @@ type (
 	Network struct {
 		Id          uint32
 		Topology    Topology
-		Activations []Matrix
 		Weights     []Matrix
 		Biases      []Matrix
+		Activations []Matrix
+		Errors      []Matrix
+		WGradients  []Gradients
+		BGradients  []Gradients
 	}
 )
 
@@ -44,6 +47,9 @@ func CreateNetwork(topology Topology, id uint32) (net Network) {
 	net.Activations = make([]Matrix, len(topology.HiddenNeurons)+1)
 	net.Weights = make([]Matrix, len(topology.HiddenNeurons)+1)
 	net.Biases = make([]Matrix, len(topology.HiddenNeurons)+1)
+	net.Errors = make([]Matrix, len(topology.HiddenNeurons)+1)
+	net.WGradients = make([]Gradients, len(topology.HiddenNeurons)+1)
+	net.BGradients = make([]Gradients, len(topology.HiddenNeurons)+1)
 
 	inputSize := topology.Inputs
 	i := 0
@@ -55,8 +61,11 @@ func CreateNetwork(topology Topology, id uint32) (net Network) {
 			outputSize = topology.HiddenNeurons[i]
 		}
 		net.Weights[i] = NewMatrix(outputSize, inputSize, randomArray(inputSize*outputSize, float32(topology.Inputs)))
-		net.Activations[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
 		net.Biases[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
+		net.Activations[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
+		net.Errors[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
+		net.WGradients[i] = NewGradients(outputSize, inputSize)
+		net.BGradients[i] = NewGradients(outputSize, 1)
 		inputSize = outputSize
 	}
 	return
@@ -187,6 +196,9 @@ func Load(path string) Network {
 	net.Activations = make([]Matrix, len(topology.HiddenNeurons)+1)
 	net.Weights = make([]Matrix, len(topology.HiddenNeurons)+1)
 	net.Biases = make([]Matrix, len(topology.HiddenNeurons)+1)
+	net.Errors = make([]Matrix, len(topology.HiddenNeurons)+1)
+	net.WGradients = make([]Gradients, len(topology.HiddenNeurons)+1)
+	net.BGradients = make([]Gradients, len(topology.HiddenNeurons)+1)
 
 	buf = make([]byte, 4)
 	inputSize := topology.Inputs
@@ -206,6 +218,7 @@ func Load(path string) Network {
 			data[j] = math.Float32frombits(binary.BigEndian.Uint32(buf))
 		}
 		net.Weights[i] = NewMatrix(outputSize, inputSize, data)
+		net.WGradients[i] = NewGradients(outputSize, inputSize)
 		inputSize = outputSize
 
 		data = make([]float32, outputSize)
@@ -218,45 +231,75 @@ func Load(path string) Network {
 		}
 		net.Biases[i] = SingletonMatrix(outputSize, data)
 		net.Activations[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
+		net.Errors[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
+		net.BGradients[i] = NewGradients(outputSize, 1)
 	}
 	return net
 }
 
-func (n *Network) Predict(p *Position, evalTarget, wdlTarget float32) {
+func (n *Network) Predict(p *Position) float32 {
 
+	// First layer needs special care
 	input := p.Activations
 	activationFn := ReLu
 	// apply input layer
-	n.Activations[0].Reset()
+	output := n.Activations[0]
+	weight := n.Weights[0]
+	bias := n.Biases[0]
 	for s, p := range input {
 
 		if p != NoPiece {
 			i := toPieceSquareIndex(p, Square(s))
 
-			for j := uint32(0); j < n.Activations[0].Size(); j++ {
-				n.Activations[0].Data[j] += n.Weights[0].Get(j, uint32(i))
+			for j := uint32(0); j < output.Size(); j++ {
+				output.Data[j] = weight.Get(j, uint32(i))
 			}
 		}
 
-		for j := uint32(0); j < n.Activations[0].Size(); j++ {
-			n.Activations[0].Data[j] = activationFn(n.Activations[0].Data[j] + n.Biases[0].Data[j])
+		for j := uint32(0); j < output.Size(); j++ {
+			output.Data[j] = activationFn(output.Data[j] + bias.Data[j])
 		}
 	}
 	last := len(n.Activations) - 1
 
 	for i := 1; i < len(n.Activations); i++ {
+		input := n.Activations[i-1]
+		output = n.Activations[i]
+		weight := n.Weights[i]
+		bias := n.Biases[i]
 		if i == last {
 			activationFn = Sigmoid
 		}
 
-		n.Activations[i].Reset()
+		output.Reset()
 
-		for j := uint32(0); j < n.Activations[i].Size(); j++ {
-			for k := uint32(0); k < n.Activations[i-1].Size(); k++ {
-				n.Activations[i].Data[j] += n.Activations[i-1].Data[k] * n.Weights[i].Get(j, k)
+		for j := uint32(0); j < output.Size(); j++ {
+			for k := uint32(0); k < input.Size(); k++ {
+				output.Data[j] += input.Data[k] * weight.Get(j, k)
 			}
 
-			n.Activations[i].Data[j] = activationFn(n.Activations[i].Data[j] * n.Biases[i].Data[j])
+			output.Data[j] = activationFn(output.Data[j] * bias.Data[j])
+		}
+	}
+
+	return output.Data[0] // This makes the assumption that the output layer is always of size 1
+}
+
+func (n *Network) FindErrors(outputGradient float32) {
+	last := len(n.Activations) - 1
+	n.Errors[last].Data[0] = outputGradient
+
+	for i := last - 1; i >= 0; i-- {
+		output := n.Activations[i]
+		weight := n.Weights[i+1]
+		outputError := n.Errors[i+1]
+		inputError := n.Errors[i]
+
+		for i := uint32(0); i < inputError.Size(); i++ {
+			inputError.Data[i] = 0
+			for j := uint32(0); j < outputError.Size(); j++ {
+				inputError.Data[i] += outputError.Data[j] * weight.Get(j, i) * ReLuPrime(output.Data[i])
+			}
 		}
 	}
 }
@@ -265,35 +308,69 @@ func toPieceSquareIndex(piece Piece, square Square) int {
 	return int(piece)*64 + int(square)
 }
 
-func (n *Network) Train(p *Position, evalTarget, wdlTarget float32) float32 {
+func (n *Network) UpdateGradients(p *Position) {
+	wGradients := n.WGradients[0]
+	bGradients := n.BGradients[0]
+	err := n.Errors[0]
 
-	n.Predict(p, evalTarget, wdlTarget)
+	// First layer needs special care
+	input := p.Activations
+	for s, p := range input {
 
-	last := len(n.Activations) - 1
-	errors := make([]Matrix, len(n.Activations))
-	cost := CalculateCost(n.Activations[last], evalTarget, wdlTarget)
-	res := cost.Data[0]
-	for i := last; i > 0; i-- {
-		var err Matrix
-		if i == last {
-			err = cost
-		} else {
-			transposed := n.Weights[i+1].T()
-			err = Dot(transposed, &errors[i+1])
-			err.Apply(err, ReLuPrime)
+		if p != NoPiece {
+			i := uint32(toPieceSquareIndex(p, Square(s)))
+			for j := uint32(0); j < err.Size(); j++ {
+				g := wGradients.Get(j, i)
+				g.Update(err.Data[j])
+			}
 		}
-		errors[i] = err
-		activations := n.Activations[i-1]
-		gradient := Multiply(n.Activations[i], err)
-		gradient.Scale(gradient, LearningRate)
-		transposedInput := activations.T()
-		whoDelta := Dot(&gradient, transposedInput)
-
-		n.Weights[i].Add(n.Weights[i], whoDelta)
-		n.Biases[i].Add(n.Biases[i], gradient)
 	}
 
-	return res
+	for j := uint32(0); j < err.Size(); j++ {
+		bGradients.Data[j].Update(err.Data[j])
+	}
+
+	for i := 1; i < len(n.Activations); i++ {
+
+		wGradients = n.WGradients[i]
+		bGradients = n.BGradients[i]
+		input := n.Activations[i-1]
+		err = n.Errors[i]
+
+		for j := uint32(0); j < bGradients.Size(); j++ {
+			gradient := err.Data[j]
+			bgrad := bGradients.Data[j]
+			bgrad.Update(gradient)
+
+			for k := uint32(0); k < wGradients.Rows; k++ {
+				gradient = input.Data[j] * err.Data[k]
+				wgrad := wGradients.Get(k, j)
+				wgrad.Update(gradient)
+			}
+		}
+	}
+}
+
+func (n *Network) Train(p *Position, evalTarget, wdlTarget float32) {
+
+	// First use the net to predict the outcome of the input
+	lastOutput := n.Predict(p)
+
+	// Measuer how well did we do
+	outputGradient := CalculateCostGradient(lastOutput, evalTarget, wdlTarget) * SigmoidPrime(lastOutput)
+
+	// Use the output gradients (errors really) to measure the inner errors
+	n.FindErrors(outputGradient)
+
+	// Now, find the necessary updates to the gradients
+	n.UpdateGradients(p)
+}
+
+func (n *Network) ApplyGradients() {
+	for i := 0; i < len(n.Activations); i++ {
+		n.BGradients[i].Apply(&n.Biases[i])
+		n.WGradients[i].Apply(&n.Weights[i])
+	}
 }
 
 // Helper functions
