@@ -37,6 +37,38 @@ func NewTopology(inputs, outputs uint32, hiddenNeurons []uint32) Topology {
 	}
 }
 
+func (n *Network) Copy() *Network {
+	net := Network{
+		Id:       n.Id,
+		Topology: n.Topology,
+		Weights:  n.Weights,
+		Biases:   n.Biases,
+	}
+	topology := n.Topology
+	inputSize := topology.Inputs
+	i := 0
+	net.Activations = make([]Matrix, len(topology.HiddenNeurons)+1)
+	net.Errors = make([]Matrix, len(topology.HiddenNeurons)+1)
+	net.WGradients = make([]Gradients, len(topology.HiddenNeurons)+1)
+	net.BGradients = make([]Gradients, len(topology.HiddenNeurons)+1)
+
+	for ; i < len(net.Activations); i++ {
+		var outputSize uint32
+		if i == len(topology.HiddenNeurons) {
+			outputSize = topology.Outputs
+		} else {
+			outputSize = topology.HiddenNeurons[i]
+		}
+		net.Activations[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
+		net.Errors[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
+		net.WGradients[i] = NewGradients(outputSize, inputSize)
+		net.BGradients[i] = NewGradients(outputSize, 1)
+		inputSize = outputSize
+	}
+
+	return &net
+}
+
 // CreateNetwork creates a neural network with random weights
 func CreateNetwork(topology Topology, id uint32) (net Network) {
 	net = Network{
