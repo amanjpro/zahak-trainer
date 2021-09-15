@@ -28,7 +28,7 @@ var (
 	SigmoidScale    float32 = 2.5 / 1024
 	LearningRate    float32 = 0.01
 	NumberOfThreads         = runtime.NumCPU()
-	BatchSize               = 16384 * NumberOfThreads / 2
+	BatchSize               = 16384
 )
 
 func init() {
@@ -123,7 +123,7 @@ func (t *Trainer) StartEpoch(startTime time.Time) {
 					data := batch[d]
 					n.Train(data.Input, data.Score, data.Outcome)
 					localSamples++
-					if localSamples == 2000 {
+					if localSamples == 500 {
 						atomic.AddInt32(&samples, localSamples)
 						localSamples = 0
 						if main {
@@ -157,8 +157,8 @@ func (t *Trainer) Train(path string) {
 
 	fmt.Println("Validation cost progression")
 	fmt.Println("======================================================")
+	fmt.Println("Epoch\t\t\t\tValidation Cost")
 	for epoch := 0; epoch < t.Epochs; epoch++ {
-		fmt.Println("Epoch\t\t\t\tValidation Cost")
 		fmt.Printf("%d\t\t\t\t%f\n", epoch, t.Costs[epoch])
 	}
 	fmt.Println("======================================================")
