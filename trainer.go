@@ -77,11 +77,7 @@ func (t *Trainer) SyncGradients() {
 func (t *Trainer) PrintCost() {
 	fmt.Printf("Starting the validation of the Epoch\n")
 	totalCost := float32(0)
-	for i := 0; i < len(*t.Validation); i++ {
-		data := (*t.Training)[i]
-		predicted := t.Nets[0].Predict(data.Input)
-		totalCost += ValidationCost(predicted, data.Score, data.Outcome)
-	}
+
 	batchSize := len(*t.Validation) / NumberOfThreads
 	answer := make(chan float32)
 
