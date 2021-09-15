@@ -20,6 +20,7 @@ type (
 		Training   *[]Data
 		Validation *[]Data
 		Epochs     int
+		Costs      []float32
 	}
 )
 
@@ -47,6 +48,7 @@ func NewTrainer(net Network, dataset *[]Data, epochs int) *Trainer {
 		Training:   &training,
 		Validation: &validation,
 		Epochs:     epochs,
+		Costs:      make([]float32, epochs),
 	}
 }
 
@@ -74,7 +76,7 @@ func (t *Trainer) SyncGradients() {
 	}
 }
 
-func (t *Trainer) PrintCost() {
+func (t *Trainer) PrintCost() float32 {
 	fmt.Printf("Starting the validation of the Epoch\n")
 	totalCost := float32(0)
 
@@ -89,7 +91,9 @@ func (t *Trainer) PrintCost() {
 				data := batch[d]
 
 				predicted := n.Predict(data.Input)
-				localCost += ValidationCost(predicted, data.Score, data.Outcome)
+				cost := ValidationCost(predicted, data.Score, data.Outcome)
+
+				localCost += cost
 			}
 			answer <- localCost
 		}(t.Nets[i], batch, answer)
@@ -97,7 +101,9 @@ func (t *Trainer) PrintCost() {
 	for i := 0; i < NumberOfThreads; i++ {
 		totalCost += <-answer
 	}
-	fmt.Printf("Current cost is: %f\n", totalCost/float32(len(*t.Validation)))
+	averageCost := totalCost / float32(len(*t.Validation))
+	fmt.Printf("Current cost is: %f\n", averageCost)
+	return averageCost
 }
 
 func (t *Trainer) StartEpoch(startTime time.Time) {
@@ -146,6 +152,14 @@ func (t *Trainer) Train(path string) {
 		fmt.Printf("Storing This Epoch %d network\n", epoch)
 		t.Nets[0].Save(fmt.Sprintf("%s%cepoch-%d.nnue", path, os.PathSeparator, epoch))
 		fmt.Printf("Stored This Epoch %d's network\n", epoch)
-		t.PrintCost()
+		t.Costs[epoch] = t.PrintCost()
+	}
+
+	for epoch := 0; epoch < t.Epochs; epoch++ {
+		fmt.Println("Validation cost progression")
+		fmt.Println("======================================================")
+		fmt.Println("Epoch\t\t\t\tValidation Cost")
+		fmt.Printf("%d\t\t\t\t%f", epoch, t.Costs[epoch])
+		fmt.Println("======================================================")
 	}
 }

@@ -59,20 +59,22 @@ func ParseLine(line string) Data {
 		panic(fmt.Sprintf("Bad line %s\n", line))
 	}
 
-	score = math.Max(math.Min(score, 2000), -2000)
+	score = math.Max(math.Min(score*100, 2000), -2000)
 
-	outcomePart := strings.Split(parts[3], ":")
+	outcomePart := strings.Split(parts[4], ":")
 	if len(outcomePart) != 2 {
-		panic(fmt.Sprintf("Bad line %s\n", parts[3]))
+		panic(fmt.Sprintf("Bad line %s\n", parts[4]))
 	}
 	outcome, err := strconv.ParseFloat(outcomePart[1], 32)
 	if err != nil {
 		panic(fmt.Sprintf("Bad line %s\n", line))
 	}
 
+	normalizedScore := Sigmoid(float32(score))
+
 	return Data{
 		Input:   pos,
-		Score:   Sigmoid(float32(score)),
+		Score:   normalizedScore,
 		Outcome: float32(outcome),
 	}
 }

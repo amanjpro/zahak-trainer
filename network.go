@@ -310,7 +310,7 @@ func (n *Network) Predict(p *Position) float32 {
 				output.Data[j] += input.Data[k] * weight.Get(j, k)
 			}
 
-			output.Data[j] = activationFn(output.Data[j] * bias.Data[j])
+			output.Data[j] = activationFn(output.Data[j] + bias.Data[j])
 		}
 	}
 
