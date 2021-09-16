@@ -269,23 +269,18 @@ func Load(path string) Network {
 	return net
 }
 
-func (n *Network) Predict(p *Position) float32 {
+func (n *Network) Predict(input []int16) float32 {
 
 	// First layer needs special care
-	input := p.Activations
 	activationFn := ReLu
 	// apply input layer
 	output := n.Activations[0]
 	weight := n.Weights[0]
 	bias := n.Biases[0]
-	for s, p := range input {
+	for _, i := range input {
 
-		if p != NoPiece {
-			i := toPieceSquareIndex(p, Square(s))
-
-			for j := uint32(0); j < output.Size(); j++ {
-				output.Data[j] = weight.Get(j, uint32(i))
-			}
+		for j := uint32(0); j < output.Size(); j++ {
+			output.Data[j] = weight.Get(j, uint32(i))
 		}
 
 		for j := uint32(0); j < output.Size(); j++ {
@@ -336,30 +331,22 @@ func (n *Network) FindErrors(outputGradient float32) {
 	}
 }
 
-func toPieceSquareIndex(piece Piece, square Square) int {
-	return int(piece)*64 + int(square)
-}
-
-func (n *Network) UpdateGradients(p *Position) {
+func (n *Network) UpdateGradients(input []int16) {
 	wGradients := n.WGradients[0]
 	bGradients := n.BGradients[0]
 	err := n.Errors[0]
 
 	// First layer needs special care
-	input := p.Activations
-	for s, p := range input {
+	for _, i := range input {
 
-		if p != NoPiece {
-			i := uint32(toPieceSquareIndex(p, Square(s)))
-			for j := uint32(0); j < err.Size(); j++ {
-				g := wGradients.Get(j, i)
-				g.Update(err.Data[j])
-			}
+		for j := uint32(0); j < err.Size(); j++ {
+			g := wGradients.Get(j, uint32(i))
+			g.Update(err.Data[j])
 		}
-	}
 
-	for j := uint32(0); j < err.Size(); j++ {
-		bGradients.Data[j].Update(err.Data[j])
+		for j := uint32(0); j < err.Size(); j++ {
+			bGradients.Data[j].Update(err.Data[j])
+		}
 	}
 
 	for i := 1; i < len(n.Activations); i++ {
@@ -383,10 +370,10 @@ func (n *Network) UpdateGradients(p *Position) {
 	}
 }
 
-func (n *Network) Train(p *Position, evalTarget, wdlTarget float32) float32 {
+func (n *Network) Train(input []int16, evalTarget, wdlTarget float32) float32 {
 
 	// First use the net to predict the outcome of the input
-	lastOutput := n.Predict(p)
+	lastOutput := n.Predict(input)
 
 	// Measuer how well did we do
 	outputGradient := CalculateCostGradient(lastOutput, evalTarget, wdlTarget) * SigmoidPrime(lastOutput)
@@ -395,7 +382,7 @@ func (n *Network) Train(p *Position, evalTarget, wdlTarget float32) float32 {
 	n.FindErrors(outputGradient)
 
 	// Now, find the necessary updates to the gradients
-	n.UpdateGradients(p)
+	n.UpdateGradients(input)
 
 	return ValidationCost(lastOutput, evalTarget, wdlTarget)
 }
