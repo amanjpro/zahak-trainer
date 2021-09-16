@@ -102,6 +102,65 @@ func TestUpdateGradients(t *testing.T) {
 	}
 }
 
+func TestApplyGradients(t *testing.T) {
+	net := createNetwork()
+
+	input := []int16{0, 1, 2, 3, 4, 5, 6, 7}
+	net.Predict(input)
+	net.FindErrors(0.5)
+	net.UpdateGradients(input)
+
+	wgrads := [][]float32{
+		fill(32, 1),
+		fill(8, 4.5),
+		fill(2, 37*0.5),
+	}
+
+	bgrads := [][]float32{
+		fill(4, 1),
+		fill(2, 0.5),
+		fill(1, 0.5),
+	}
+
+	update := func(x float32, gv float32) float32 {
+		g := Gradient{Value: gv}
+		return x - g.Calculate()
+	}
+
+	applyAll := func(xs []float32, gs []float32) []float32 {
+		ys := make([]float32, len(xs))
+		for i := 0; i < len(xs); i++ {
+			ys[i] = update(xs[i], gs[i])
+		}
+		return ys
+	}
+
+	bExpected := make([][]float32, len(bgrads))
+	wExpected := make([][]float32, len(wgrads))
+
+	for i := 0; i < len(net.Activations); i++ {
+		wExpected[i] = applyAll(net.Weights[i].Data, wgrads[i])
+		bExpected[i] = applyAll(net.Biases[i].Data, bgrads[i])
+	}
+
+	net.ApplyGradients()
+
+	for i := 0; i < len(net.Activations); i++ {
+		expected := wExpected[i]
+		actual := net.Weights[i]
+		if !sameArray(expected, actual.Data) {
+			t.Errorf(fmt.Sprintf("Issues in weight update: Got %v, Expected %v", actual.Data, expected))
+		}
+
+		expected = bExpected[i]
+		actual = net.Biases[i]
+		if !sameArray(expected, actual.Data) {
+			t.Errorf(fmt.Sprintf("Issues in bias update: Got %v, Expected %v", actual.Data, expected))
+		}
+	}
+
+}
+
 func TestBinaryReaderWriter(t *testing.T) {
 	top := NewTopology(10, 11, []uint32{12, 13, 14, 15, 16})
 	net1 := CreateNetwork(top, 30)
