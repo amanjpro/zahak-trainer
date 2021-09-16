@@ -172,6 +172,9 @@ func (t *Trainer) Train(path string) {
 		t.Nets[0].Save(fmt.Sprintf("%s%cepoch-%d.nnue", path, os.PathSeparator, epoch+1))
 		fmt.Printf("Stored This Epoch %d's network\n", epoch+1)
 		t.Costs[epoch] = t.PrintCost()
+		if (epoch+1)%20 == 0 {
+			LearningRate /= 1.1
+		}
 	}
 
 	fmt.Println("Validation cost progression")
