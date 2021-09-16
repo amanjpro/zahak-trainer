@@ -277,28 +277,26 @@ func (n *Network) Predict(input []int16) float32 {
 	output := n.Activations[0]
 	weight := n.Weights[0]
 	bias := n.Biases[0]
+	output.Reset()
 	for _, i := range input {
-
 		for j := uint32(0); j < output.Size(); j++ {
-			output.Data[j] = weight.Get(j, uint32(i))
+			output.Data[j] += weight.Get(j, uint32(i))
 		}
-
-		for j := uint32(0); j < output.Size(); j++ {
-			output.Data[j] = activationFn(output.Data[j] + bias.Data[j])
-		}
+	}
+	for j := uint32(0); j < output.Size(); j++ {
+		output.Data[j] = activationFn(output.Data[j] + bias.Data[j])
 	}
 	last := len(n.Activations) - 1
 
 	for i := 1; i < len(n.Activations); i++ {
 		input := n.Activations[i-1]
 		output = n.Activations[i]
+		output.Reset()
 		weight := n.Weights[i]
 		bias := n.Biases[i]
 		if i == last {
 			activationFn = Sigmoid
 		}
-
-		output.Reset()
 
 		for j := uint32(0); j < output.Size(); j++ {
 			for k := uint32(0); k < input.Size(); k++ {
@@ -343,10 +341,10 @@ func (n *Network) UpdateGradients(input []int16) {
 			g := wGradients.Get(j, uint32(i))
 			g.Update(err.Data[j])
 		}
+	}
 
-		for j := uint32(0); j < err.Size(); j++ {
-			bGradients.Data[j].Update(err.Data[j])
-		}
+	for j := uint32(0); j < err.Size(); j++ {
+		bGradients.Data[j].Update(err.Data[j])
 	}
 
 	for i := 1; i < len(n.Activations); i++ {

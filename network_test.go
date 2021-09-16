@@ -5,6 +5,30 @@ import (
 	"testing"
 )
 
+func TestPredict(t *testing.T) {
+	top := NewTopology(4, 1, []uint32{2})
+	net := CreateNetwork(top, 30)
+
+	// For predictability set all weights and biases to 1
+	for i := 0; i < len(net.Activations); i++ {
+		bb := net.Biases[i]
+		for j := uint32(0); j < bb.Size(); j++ {
+			bb.Data[j] = 1
+		}
+
+		ww := net.Weights[i]
+		for j := uint32(0); j < ww.Size(); j++ {
+			ww.Data[j] = 1
+		}
+	}
+
+	actual := net.Predict([]int16{0, 1, 2, 3})
+	expected := Sigmoid(11)
+	if actual != expected {
+		t.Errorf(fmt.Sprintf("Got %f, Expected %f", actual, expected))
+	}
+}
+
 func TestBinaryReaderWriter(t *testing.T) {
 	top := NewTopology(10, 11, []uint32{12, 13, 14, 15, 16})
 	net1 := CreateNetwork(top, 30)

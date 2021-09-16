@@ -13,10 +13,6 @@ type (
 	Piece       uint8
 	Square      uint8
 	PositionTag uint8
-	Position    struct {
-		Activations [64]Piece
-		// Tags    PositionTag
-	}
 )
 
 // const (
@@ -157,17 +153,13 @@ func pieceFromName(name rune) Piece {
 
 var ranks = []Square{A8, A7, A6, A5, A4, A3, A2, A1}
 
-func FromFen(fen string) *Position {
+func FromFen(fen string) []int16 {
 	words := strings.Split(fen, " ")
 	if len(words) != 6 {
 		panic(fmt.Sprintf("Expected 6 parts of the FEN, got %s\n", fen))
 	}
 
-	pos := Position{}
-
-	for i := 0; i < len(pos.Activations); i++ {
-		pos.Activations[i] = NoPiece
-	}
+	input := make([]int16, 0, 32)
 
 	rank := 0
 	boardIndex := A8
@@ -182,7 +174,7 @@ func FromFen(fen string) *Position {
 			boardIndex = ranks[rank]
 			continue
 		} else if p := pieceFromName(ch); p != NoPiece {
-			pos.Activations[boardIndex] = p
+			input = append(input, int16(p)*64+int16(boardIndex))
 			boardIndex++
 		} else {
 			panic(fmt.Sprintf("Invalid FEN notation %s, boardIndex == %d, parsing %s\n",
@@ -190,5 +182,5 @@ func FromFen(fen string) *Position {
 		}
 	}
 
-	return &pos
+	return input
 }
