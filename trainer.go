@@ -76,6 +76,24 @@ func (t *Trainer) SyncGradients() {
 	}
 }
 
+func (t *Trainer) SyncGradientsMomentum() {
+	for i := 1; i < len(t.Nets); i++ {
+		for j := 0; j < len(t.Nets[i].Activations); j++ {
+			wgrad := t.Nets[i].WGradients[j]
+			for k := uint32(0); k < wgrad.Size(); k++ {
+				wgrad.Data[k].M1 = t.Nets[0].WGradients[j].Data[k].M1
+				wgrad.Data[k].M2 = t.Nets[0].WGradients[j].Data[k].M2
+			}
+
+			bgrad := t.Nets[i].BGradients[j]
+			for k := uint32(0); k < bgrad.Size(); k++ {
+				bgrad.Data[k].M1 = t.Nets[0].BGradients[j].Data[k].M1
+				bgrad.Data[k].M2 = t.Nets[0].BGradients[j].Data[k].M2
+			}
+		}
+	}
+}
+
 func (t *Trainer) PrintCost() float32 {
 	fmt.Printf("Starting the validation of the Epoch\n")
 	totalCost := float32(0)
@@ -137,6 +155,7 @@ func (t *Trainer) StartEpoch(startTime time.Time) {
 		wg.Wait()
 		t.SyncGradients()
 		t.Nets[0].ApplyGradients()
+		t.SyncGradientsMomentum()
 		t.CopyNets()
 		batchEnd += BatchSize
 	}
