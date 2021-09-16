@@ -168,9 +168,9 @@ func (t *Trainer) Train(path string) {
 		fmt.Printf("Number of samples: %d\n", len(*t.Training))
 		t.StartEpoch(startTime)
 		fmt.Printf("\nFinished Epoch %d at %s, elapsed time %s\n", epoch, time.Now().String(), time.Since(startTime).String())
-		fmt.Printf("Storing This Epoch %d network\n", epoch)
-		t.Nets[0].Save(fmt.Sprintf("%s%cepoch-%d.nnue", path, os.PathSeparator, epoch))
-		fmt.Printf("Stored This Epoch %d's network\n", epoch)
+		fmt.Printf("Storing This Epoch %d network\n", epoch+1)
+		t.Nets[0].Save(fmt.Sprintf("%s%cepoch-%d.nnue", path, os.PathSeparator, epoch+1))
+		fmt.Printf("Stored This Epoch %d's network\n", epoch+1)
 		t.Costs[epoch] = t.PrintCost()
 	}
 
