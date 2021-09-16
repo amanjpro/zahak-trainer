@@ -184,13 +184,13 @@ func (t *Trainer) Train(path string) {
 		if (epoch+1)%20 == 0 {
 			LearningRate /= 1.1
 		}
+		fmt.Println("Training and validation cost progression")
+		fmt.Println("==============================================================================")
+		fmt.Println("Epoch\t\t\t\tTraining Cost\t\t\t\tValidation Cost")
+		for e := 0; e <= epoch; e++ {
+			fmt.Printf("%d\t\t\t\t%f\t\t\t\t%f\n", e+1, t.TrainingCosts[e], t.ValidationCosts[e])
+		}
+		fmt.Println("==============================================================================")
 	}
 
-	fmt.Println("Training and validation cost progression")
-	fmt.Println("==============================================================================")
-	fmt.Println("Epoch\t\t\t\tTraining Cost\t\t\t\tValidation Cost")
-	for epoch := 0; epoch < t.Epochs; epoch++ {
-		fmt.Printf("%d\t\t\t\t%f\t\t\t\t%f\n", epoch+1, t.TrainingCosts[epoch], t.ValidationCosts[epoch])
-	}
-	fmt.Println("==============================================================================")
 }
