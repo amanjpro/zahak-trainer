@@ -373,7 +373,7 @@ func (n *Network) Train(input []int16, evalTarget, wdlTarget float32) float32 {
 	// First use the net to predict the outcome of the input
 	lastOutput := n.Predict(input)
 
-	// Measuer how well did we do
+	// Measure how well did we do
 	outputGradient := CalculateCostGradient(lastOutput, evalTarget, wdlTarget) * SigmoidPrime(lastOutput)
 
 	// Use the output gradients (errors really) to measure the inner errors

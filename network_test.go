@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestPredict(t *testing.T) {
+func createNetwork() *Network {
 	top := NewTopology(4, 1, []uint32{2})
 	net := CreateNetwork(top, 30)
 
@@ -22,10 +22,45 @@ func TestPredict(t *testing.T) {
 		}
 	}
 
-	actual := net.Predict([]int16{0, 1, 2, 3})
-	expected := Sigmoid(11)
-	if actual != expected {
-		t.Errorf(fmt.Sprintf("Got %f, Expected %f", actual, expected))
+	return &net
+}
+
+func TestPredict(t *testing.T) {
+	net := createNetwork()
+
+	net.Predict([]int16{0, 1, 2, 3})
+
+	activations := [][]float32{
+		{5, 5},
+		{Sigmoid(11)},
+	}
+
+	for i := 0; i < len(net.Activations); i++ {
+		expected := activations[i]
+		actual := net.Activations[i]
+		if !sameArray(expected, actual.Data) {
+			t.Errorf(fmt.Sprintf("Got %v, Expected %v", actual.Data, expected))
+		}
+	}
+}
+
+func TestFindErrors(t *testing.T) {
+	net := createNetwork()
+
+	net.Predict([]int16{0, 1, 2, 3})
+	net.FindErrors(0.5)
+
+	errors := [][]float32{
+		{ReLuPrime(5) * 0.5, ReLuPrime(5) * 0.5},
+		{0.5},
+	}
+
+	for i := 0; i < len(net.Activations); i++ {
+		expected := errors[i]
+		actual := net.Errors[i]
+		if !sameArray(expected, actual.Data) {
+			t.Errorf(fmt.Sprintf("Got %v, Expected %v", actual.Data, expected))
+		}
 	}
 }
 
@@ -87,6 +122,18 @@ func sameTopology(top1, top2 Topology) bool {
 
 	for i := 0; i < len(top1.HiddenNeurons); i++ {
 		if top1.HiddenNeurons[i] != top2.HiddenNeurons[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func sameArray(expected, actual []float32) bool {
+	if len(expected) != len(actual) {
+		return false
+	}
+	for i := 0; i < len(expected); i++ {
+		if expected[i] != actual[i] {
 			return false
 		}
 	}
