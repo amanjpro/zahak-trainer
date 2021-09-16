@@ -163,8 +163,10 @@ func FromFen(fen string) *Position {
 		panic(fmt.Sprintf("Expected 6 parts of the FEN, got %s\n", fen))
 	}
 
-	pos := Position{
-		// Activations: make([]int, 0, 32),
+	pos := Position{}
+
+	for i := 0; i < len(pos.Activations); i++ {
+		pos.Activations[i] = NoPiece
 	}
 
 	rank := 0
