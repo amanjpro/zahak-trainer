@@ -71,6 +71,14 @@ func (g *Gradients) Get(row, col uint32) Gradient {
 	return g.Data[col*g.Rows+row]
 }
 
+func (g *Gradients) Set(row, col uint32, grad Gradient) {
+	if row >= g.Rows || col >= g.Cols {
+		fmt.Println("Bad Address", col, g.Cols, row, g.Rows)
+		panic("Bad Address")
+	}
+	g.Data[col*g.Rows+row] = grad
+}
+
 func (g *Gradients) Size() uint32 {
 	return g.Rows * g.Cols
 }
@@ -79,4 +87,13 @@ func (g *Gradients) Apply(m *Matrix) {
 	for i := uint32(0); i < m.Size(); i++ {
 		g.Data[i].Apply(&m.Data[i])
 	}
+}
+
+func (g *Gradients) Values() []float32 {
+	vs := make([]float32, g.Size())
+	for i := uint32(0); i < g.Size(); i++ {
+		vs[i] = g.Data[i].Value
+	}
+
+	return vs
 }

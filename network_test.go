@@ -31,9 +31,9 @@ func TestPredict(t *testing.T) {
 	net.Predict([]int16{0, 1, 2, 3, 4, 5, 6, 7})
 
 	activations := [][]float32{
-		{9, 9, 9, 9},
-		{37, 37},
-		{Sigmoid(75)},
+		fill(4, 9),
+		fill(2, 37),
+		fill(1, Sigmoid(75)),
 	}
 
 	for i := 0; i < len(net.Activations); i++ {
@@ -48,13 +48,13 @@ func TestPredict(t *testing.T) {
 func TestFindErrors(t *testing.T) {
 	net := createNetwork()
 
-	net.Predict([]int16{0, 1, 2, 3})
+	net.Predict([]int16{0, 1, 2, 3, 4, 5, 6, 7})
 	net.FindErrors(0.5)
 
 	errors := [][]float32{
-		{1, 1, 1, 1},
-		{0.5, 0.5},
-		{0.5},
+		fill(4, 1),
+		fill(2, 0.5),
+		fill(1, 0.5),
 	}
 
 	for i := 0; i < len(net.Activations); i++ {
@@ -62,6 +62,42 @@ func TestFindErrors(t *testing.T) {
 		actual := net.Errors[i]
 		if !sameArray(expected, actual.Data) {
 			t.Errorf(fmt.Sprintf("Got %v, Expected %v", actual.Data, expected))
+		}
+	}
+}
+
+func TestUpdateGradients(t *testing.T) {
+	net := createNetwork()
+
+	input := []int16{0, 1, 2, 3, 4, 5, 6, 7}
+	net.Predict(input)
+	net.FindErrors(0.5)
+	net.UpdateGradients(input)
+
+	wgrads := [][]float32{
+		fill(32, 1),
+		fill(8, 4.5),
+		fill(2, 37*0.5),
+	}
+
+	for i := 0; i < len(net.Activations); i++ {
+		expected := wgrads[i]
+		actual := net.WGradients[i]
+		if !sameArray(expected, actual.Values()) {
+			t.Errorf(fmt.Sprintf("Got %v, Expected %v", actual.Values(), expected))
+		}
+	}
+
+	bgrads := [][]float32{
+		fill(4, 1),
+		fill(2, 0.5),
+		fill(1, 0.5),
+	}
+	for i := 0; i < len(net.Activations); i++ {
+		expected := bgrads[i]
+		actual := net.BGradients[i]
+		if !sameArray(expected, actual.Values()) {
+			t.Errorf(fmt.Sprintf("Got %v, Expected %v", actual.Values(), expected))
 		}
 	}
 }
@@ -140,4 +176,12 @@ func sameArray(expected, actual []float32) bool {
 		}
 	}
 	return true
+}
+
+func fill(size int, with float32) []float32 {
+	a := make([]float32, size)
+	for i := 0; i < len(a); i++ {
+		a[i] = with
+	}
+	return a
 }
