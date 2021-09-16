@@ -6,7 +6,7 @@ import (
 )
 
 func createNetwork() *Network {
-	top := NewTopology(4, 1, []uint32{2})
+	top := NewTopology(8, 1, []uint32{4, 2})
 	net := CreateNetwork(top, 30)
 
 	// For predictability set all weights and biases to 1
@@ -28,11 +28,12 @@ func createNetwork() *Network {
 func TestPredict(t *testing.T) {
 	net := createNetwork()
 
-	net.Predict([]int16{0, 1, 2, 3})
+	net.Predict([]int16{0, 1, 2, 3, 4, 5, 6, 7})
 
 	activations := [][]float32{
-		{5, 5},
-		{Sigmoid(11)},
+		{9, 9, 9, 9},
+		{37, 37},
+		{Sigmoid(75)},
 	}
 
 	for i := 0; i < len(net.Activations); i++ {
@@ -51,7 +52,8 @@ func TestFindErrors(t *testing.T) {
 	net.FindErrors(0.5)
 
 	errors := [][]float32{
-		{ReLuPrime(5) * 0.5, ReLuPrime(5) * 0.5},
+		{1, 1, 1, 1},
+		{0.5, 0.5},
 		{0.5},
 	}
 
