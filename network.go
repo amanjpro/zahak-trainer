@@ -383,7 +383,7 @@ func (n *Network) UpdateGradients(p *Position) {
 	}
 }
 
-func (n *Network) Train(p *Position, evalTarget, wdlTarget float32) {
+func (n *Network) Train(p *Position, evalTarget, wdlTarget float32) float32 {
 
 	// First use the net to predict the outcome of the input
 	lastOutput := n.Predict(p)
@@ -396,6 +396,8 @@ func (n *Network) Train(p *Position, evalTarget, wdlTarget float32) {
 
 	// Now, find the necessary updates to the gradients
 	n.UpdateGradients(p)
+
+	return ValidationCost(lastOutput, evalTarget, wdlTarget)
 }
 
 func (n *Network) ApplyGradients() {
