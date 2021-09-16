@@ -104,7 +104,7 @@ func CreateNetwork(topology Topology, id uint32) (net Network) {
 }
 
 // Binary specification for the NNUE file:
-// - All the data is stored in big-endian layout
+// - All the data is stored in little-endian layout
 // - All the matrices are written in column-major
 // - The magic number/version consists of 4 bytes (int32):
 //   - 66 (which is the ASCII code for B), uint8
@@ -133,7 +133,7 @@ func (n *Network) Save(file string) {
 	}
 
 	// Write network Id
-	binary.BigEndian.PutUint32(buf, n.Id)
+	binary.LittleEndian.PutUint32(buf, n.Id)
 	_, err = f.Write(buf)
 	if err != nil {
 		panic(err)
@@ -141,11 +141,11 @@ func (n *Network) Save(file string) {
 
 	// Write Topology
 	buf = make([]byte, 3*4+4*len(n.Topology.HiddenNeurons))
-	binary.BigEndian.PutUint32(buf[0:], n.Topology.Inputs)
-	binary.BigEndian.PutUint32(buf[4:], n.Topology.Outputs)
-	binary.BigEndian.PutUint32(buf[8:], uint32(len(n.Topology.HiddenNeurons)))
+	binary.LittleEndian.PutUint32(buf[0:], n.Topology.Inputs)
+	binary.LittleEndian.PutUint32(buf[4:], n.Topology.Outputs)
+	binary.LittleEndian.PutUint32(buf[8:], uint32(len(n.Topology.HiddenNeurons)))
 	for i := 0; i < len(n.Topology.HiddenNeurons); i++ {
-		binary.BigEndian.PutUint32(buf[12+4*i:], n.Topology.HiddenNeurons[i])
+		binary.LittleEndian.PutUint32(buf[12+4*i:], n.Topology.HiddenNeurons[i])
 	}
 	_, err = f.Write(buf)
 	if err != nil {
@@ -156,7 +156,7 @@ func (n *Network) Save(file string) {
 	for i := 0; i < len(n.Activations); i++ {
 		weights := n.Weights[i].Data
 		for j := 0; j < len(weights); j++ {
-			binary.BigEndian.PutUint32(buf, math.Float32bits(weights[j]))
+			binary.LittleEndian.PutUint32(buf, math.Float32bits(weights[j]))
 			_, err := f.Write(buf)
 			if err != nil {
 				panic(err)
@@ -165,7 +165,7 @@ func (n *Network) Save(file string) {
 
 		biases := n.Biases[i].Data
 		for j := 0; j < len(biases); j++ {
-			binary.BigEndian.PutUint32(buf, math.Float32bits(biases[j]))
+			binary.LittleEndian.PutUint32(buf, math.Float32bits(biases[j]))
 			_, err := f.Write(buf)
 			if err != nil {
 				panic(err)
@@ -196,7 +196,7 @@ func Load(path string) Network {
 	if err != nil {
 		panic(err)
 	}
-	id := binary.BigEndian.Uint32(buf)
+	id := binary.LittleEndian.Uint32(buf)
 
 	// Read Topology Header
 	buf = make([]byte, 12)
@@ -204,9 +204,9 @@ func Load(path string) Network {
 	if err != nil {
 		panic(err)
 	}
-	inputs := binary.BigEndian.Uint32(buf[:4])
-	outputs := binary.BigEndian.Uint32(buf[4:8])
-	layers := binary.BigEndian.Uint32(buf[8:])
+	inputs := binary.LittleEndian.Uint32(buf[:4])
+	outputs := binary.LittleEndian.Uint32(buf[4:8])
+	layers := binary.LittleEndian.Uint32(buf[8:])
 
 	buf = make([]byte, 4*layers)
 	_, err = io.ReadFull(f, buf)
@@ -215,7 +215,7 @@ func Load(path string) Network {
 	}
 	neurons := make([]uint32, layers)
 	for i := uint32(0); i < layers; i++ {
-		neurons[i] = binary.BigEndian.Uint32(buf[i*4 : (i+1)*4])
+		neurons[i] = binary.LittleEndian.Uint32(buf[i*4 : (i+1)*4])
 	}
 
 	topology := NewTopology(inputs, outputs, neurons)
@@ -247,7 +247,7 @@ func Load(path string) Network {
 			if err != nil {
 				panic(err)
 			}
-			data[j] = math.Float32frombits(binary.BigEndian.Uint32(buf))
+			data[j] = math.Float32frombits(binary.LittleEndian.Uint32(buf))
 		}
 		net.Weights[i] = NewMatrix(outputSize, inputSize, data)
 		net.WGradients[i] = NewGradients(outputSize, inputSize)
@@ -259,7 +259,7 @@ func Load(path string) Network {
 			if err != nil {
 				panic(err)
 			}
-			data[j] = math.Float32frombits(binary.BigEndian.Uint32(buf))
+			data[j] = math.Float32frombits(binary.LittleEndian.Uint32(buf))
 		}
 		net.Biases[i] = SingletonMatrix(outputSize, data)
 		net.Activations[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
