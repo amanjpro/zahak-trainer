@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"math"
 )
 
@@ -63,20 +62,8 @@ func NewGradients(rows, cols uint32) Gradients {
 	}
 }
 
-func (g *Gradients) Get(row, col uint32) Gradient {
-	if row >= g.Rows || col >= g.Cols {
-		fmt.Println("Bad Address", col, g.Cols, row, g.Rows)
-		panic("Bad Address")
-	}
-	return g.Data[col*g.Rows+row]
-}
-
-func (g *Gradients) Set(row, col uint32, grad Gradient) {
-	if row >= g.Rows || col >= g.Cols {
-		fmt.Println("Bad Address", col, g.Cols, row, g.Rows)
-		panic("Bad Address")
-	}
-	g.Data[col*g.Rows+row] = grad
+func (g *Gradients) Update(row, col uint32, gradient float32) {
+	g.Data[col*g.Rows+row].Update(gradient)
 }
 
 func (g *Gradients) Size() uint32 {

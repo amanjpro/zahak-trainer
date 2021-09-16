@@ -1,7 +1,5 @@
 package main
 
-import "fmt"
-
 type (
 	Matrix struct {
 		Data []float32
@@ -31,10 +29,6 @@ func (m *Matrix) Size() uint32 {
 }
 
 func (m *Matrix) Get(row, col uint32) float32 {
-	if row >= m.Rows || col >= m.Cols {
-		fmt.Println("Bad Address", col, m.Cols, row, m.Rows)
-		panic("Bad Address")
-	}
 	return m.Data[col*m.Rows+row]
 }
 

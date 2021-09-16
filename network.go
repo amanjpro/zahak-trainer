@@ -338,16 +338,12 @@ func (n *Network) UpdateGradients(input []int16) {
 	for _, i := range input {
 
 		for j := uint32(0); j < err.Size(); j++ {
-			g := wGradients.Get(j, uint32(i))
-			g.Update(err.Data[j])
-			wGradients.Set(j, uint32(i), g)
+			wGradients.Update(j, uint32(i), err.Data[j])
 		}
 	}
 
 	for j := uint32(0); j < err.Size(); j++ {
-		bgrad := bGradients.Data[j]
-		bgrad.Update(err.Data[j])
-		bGradients.Data[j] = bgrad
+		bGradients.Data[j].Update(err.Data[j])
 	}
 
 	for i := 1; i < len(n.Activations); i++ {
@@ -359,15 +355,11 @@ func (n *Network) UpdateGradients(input []int16) {
 
 		for j := uint32(0); j < bGradients.Size(); j++ {
 			gradient := err.Data[j]
-			bgrad := bGradients.Data[j]
-			bgrad.Update(gradient)
-			bGradients.Data[j] = bgrad
+			bGradients.Data[j].Update(gradient)
 
 			for k := uint32(0); k < input.Size(); k++ {
 				gradient := input.Data[k] * err.Data[j]
-				wgrad := wGradients.Get(j, k)
-				wgrad.Update(gradient)
-				wGradients.Set(j, k, wgrad)
+				wGradients.Update(j, k, gradient)
 			}
 		}
 	}
