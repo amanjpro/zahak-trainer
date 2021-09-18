@@ -163,37 +163,39 @@ func TestApplyGradients(t *testing.T) {
 }
 
 func TestGradientsDifferences(t *testing.T) {
-	top := NewTopology(768, 1, []uint32{128, 64})
-	net := CreateNetwork(top, 30)
+	for i := 0; i < 1000; i++ {
+		top := NewTopology(768, 1, []uint32{128, 64})
+		net := CreateNetwork(top, 30)
 
-	line := "5k2/ppp5/4P3/3R3p/6P1/1K2Nr2/PP3P2/8 b - - 1 32;score:-0.720000;eval:50;qs:0;outcome:0.5"
-	data := ParseLine(line)
+		line := "5k2/ppp5/4P3/3R3p/6P1/1K2Nr2/PP3P2/8 b - - 1 32;score:-0.720000;eval:50;qs:0;outcome:0.5"
+		data := ParseLine(line)
 
-	net.Train(data.Input, data.Score, data.Outcome)
+		net.Train(data.Input, data.Score, data.Outcome)
 
-	lastOutput := net.Predict(data.Input)
-	e1 := ValidationCost(lastOutput, data.Score, data.Outcome)
+		lastOutput := net.Predict(data.Input)
+		e1 := ValidationCost(lastOutput, data.Score, data.Outcome)
 
-	change := float32(0.001)
-	changeIndex := rand.Intn(len(net.Weights[2].Data))
+		change := float32(0.001)
+		changeIndex := rand.Intn(len(net.Weights[2].Data))
 
-	// Tweak a weight
-	net.Weights[2].Data[changeIndex] += change
+		// Tweak a weight
+		net.Weights[2].Data[changeIndex] += change
 
-	lastOutput = net.Predict(data.Input)
-	e2 := ValidationCost(lastOutput, data.Score, data.Outcome)
+		lastOutput = net.Predict(data.Input)
+		e2 := ValidationCost(lastOutput, data.Score, data.Outcome)
 
-	grad := (e2 - e1) / change
+		grad := (e2 - e1) / change
 
-	diff := net.WGradients[2].Data[changeIndex].Value - grad
-	if diff < 0 {
-		diff *= -1
-	}
+		diff := net.WGradients[2].Data[changeIndex].Value - grad
+		if diff < 0 {
+			diff *= -1
+		}
 
-	avg := (grad + net.WGradients[2].Data[changeIndex].Value) / 2
+		avg := (grad + net.WGradients[2].Data[changeIndex].Value) / 2
 
-	if (diff/avg)*100 >= 10 {
-		t.Errorf(fmt.Sprintf("Computed gradient is off: Got %v, Expected %v. Change is %f", net.WGradients[2].Data[changeIndex].Value, grad, diff/grad*100))
+		if (diff/avg)*100 >= 10 {
+			t.Errorf(fmt.Sprintf("Computed gradient is off: Got %v, Expected %v. Change is %f", net.WGradients[2].Data[changeIndex].Value, grad, diff/grad*100))
+		}
 	}
 }
 

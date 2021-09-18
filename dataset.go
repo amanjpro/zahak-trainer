@@ -49,6 +49,7 @@ func ParseLine(line string) Data {
 	}
 
 	pos := FromFen(parts[0])
+	stm := parts[1]
 
 	scorePart := strings.Split(parts[1], ":")
 	if len(scorePart) != 2 {
@@ -65,9 +66,25 @@ func ParseLine(line string) Data {
 	if len(outcomePart) != 2 {
 		panic(fmt.Sprintf("Bad line %s\n", parts[4]))
 	}
-	outcome, err := strconv.ParseFloat(outcomePart[1], 32)
-	if err != nil {
-		panic(fmt.Sprintf("Bad line %s\n", line))
+
+	var outcome float32
+	if string(stm) == "b" {
+		score *= -1
+		if string(outcomePart[1]) == "1.0" {
+			outcome = 0
+		} else if string(outcomePart[1]) == "0.0" {
+			outcome = 1
+		} else {
+			outcome = 0.5
+		}
+	} else {
+		if string(outcomePart[1]) == "1.0" {
+			outcome = 1
+		} else if string(outcomePart[1]) == "0.0" {
+			outcome = 0
+		} else {
+			outcome = 0.5
+		}
 	}
 
 	normalizedScore := Sigmoid(float32(score))
