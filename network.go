@@ -279,11 +279,13 @@ func (n *Network) Predict(input []int16) float32 {
 	bias := n.Biases[0]
 	output.Reset()
 	for _, i := range input {
-		for j := uint32(0); j < output.Size(); j++ {
+		osize := output.Size()
+		for j := uint32(0); j < osize; j++ {
 			output.Data[j] += weight.Get(j, uint32(i))
 		}
 	}
-	for j := uint32(0); j < output.Size(); j++ {
+	osize := output.Size()
+	for j := uint32(0); j < osize; j++ {
 		output.Data[j] = activationFn(output.Data[j] + bias.Data[j])
 	}
 	last := len(n.Activations) - 1
@@ -297,9 +299,11 @@ func (n *Network) Predict(input []int16) float32 {
 			activationFn = Sigmoid
 		}
 
-		for j := uint32(0); j < output.Size(); j++ {
+		osize := output.Size()
+		for j := uint32(0); j < osize; j++ {
 			output.Data[j] = 0
-			for k := uint32(0); k < input.Size(); k++ {
+			isize := input.Size()
+			for k := uint32(0); k < isize; k++ {
 				output.Data[j] += input.Data[k] * weight.Get(j, k)
 			}
 
@@ -320,9 +324,11 @@ func (n *Network) FindErrors(outputGradient float32) {
 		outputError := n.Errors[i+1]
 		inputError := n.Errors[i]
 
-		for i := uint32(0); i < inputError.Size(); i++ {
+		isize := inputError.Size()
+		for i := uint32(0); i < isize; i++ {
 			inputError.Data[i] = 0
-			for j := uint32(0); j < outputError.Size(); j++ {
+			osize := outputError.Size()
+			for j := uint32(0); j < osize; j++ {
 				inputError.Data[i] += outputError.Data[j] * weight.Get(j, i) * ReLuPrime(output.Data[i])
 			}
 		}
@@ -336,12 +342,14 @@ func (n *Network) UpdateGradients(input []int16) {
 
 	// First layer needs special care
 	for _, i := range input {
-		for j := uint32(0); j < err.Size(); j++ {
+		esize := err.Size()
+		for j := uint32(0); j < esize; j++ {
 			wGradients.Update(j, uint32(i), err.Data[j])
 		}
 	}
 
-	for j := uint32(0); j < err.Size(); j++ {
+	esize := err.Size()
+	for j := uint32(0); j < esize; j++ {
 		bGradients.Data[j].Update(err.Data[j])
 	}
 
@@ -391,8 +399,8 @@ func (n *Network) ApplyGradients() {
 // randomly generate a float64 array
 func randomArray(size uint32, v float32) (data []float32) {
 	dist := distuv.Uniform{
-		Min: -1 / math.Sqrt(float64(v)),
-		Max: 1 / math.Sqrt(float64(v)),
+		Min: 0,
+		Max: 2.0 / math.Sqrt(float64(v)),
 	}
 
 	data = make([]float32, size)

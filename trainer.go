@@ -63,33 +63,17 @@ func (t *Trainer) SyncGradients() {
 	for i := 1; i < len(t.Nets); i++ {
 		for j := 0; j < len(t.Nets[i].Activations); j++ {
 			wgrad := t.Nets[i].WGradients[j]
-			for k := uint32(0); k < wgrad.Size(); k++ {
+			size := wgrad.Size()
+			for k := uint32(0); k < size; k++ {
 				t.Nets[0].WGradients[j].Data[k].Update(wgrad.Data[k].Value)
 				t.Nets[i].WGradients[j].Data[k].Reset()
 			}
 
 			bgrad := t.Nets[i].BGradients[j]
-			for k := uint32(0); k < bgrad.Size(); k++ {
+			size = bgrad.Size()
+			for k := uint32(0); k < size; k++ {
 				t.Nets[0].BGradients[j].Data[k].Update(bgrad.Data[k].Value)
 				t.Nets[i].BGradients[j].Data[k].Reset()
-			}
-		}
-	}
-}
-
-func (t *Trainer) SyncGradientsMomentum() {
-	for i := 1; i < len(t.Nets); i++ {
-		for j := 0; j < len(t.Nets[i].Activations); j++ {
-			wgrad := t.Nets[i].WGradients[j]
-			for k := uint32(0); k < wgrad.Size(); k++ {
-				t.Nets[i].WGradients[j].Data[k].M1 = t.Nets[0].WGradients[j].Data[k].M1
-				t.Nets[i].WGradients[j].Data[k].M2 = t.Nets[0].WGradients[j].Data[k].M2
-			}
-
-			bgrad := t.Nets[i].BGradients[j]
-			for k := uint32(0); k < bgrad.Size(); k++ {
-				t.Nets[i].BGradients[j].Data[k].M1 = t.Nets[0].BGradients[j].Data[k].M1
-				t.Nets[i].BGradients[j].Data[k].M2 = t.Nets[0].BGradients[j].Data[k].M2
 			}
 		}
 	}
@@ -159,7 +143,6 @@ func (t *Trainer) StartEpoch(startTime time.Time) float32 {
 		}
 		t.SyncGradients()
 		t.Nets[0].ApplyGradients()
-		t.SyncGradientsMomentum()
 		t.CopyNets()
 		batchEnd += BatchSize
 	}
