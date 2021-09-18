@@ -94,10 +94,10 @@ func CreateNetwork(topology Topology, id uint32) (net Network) {
 		}
 		net.Weights[i] = NewMatrix(outputSize, inputSize, randomArray(inputSize*outputSize, float32(topology.Inputs)))
 		net.Biases[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
-		net.Activations[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
-		net.Errors[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
 		net.WGradients[i] = NewGradients(outputSize, inputSize)
 		net.BGradients[i] = NewGradients(outputSize, 1)
+		net.Activations[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
+		net.Errors[i] = SingletonMatrix(outputSize, randomArray(outputSize, float32(topology.Inputs)))
 		inputSize = outputSize
 	}
 	return
@@ -291,7 +291,6 @@ func (n *Network) Predict(input []int16) float32 {
 	for i := 1; i < len(n.Activations); i++ {
 		input := n.Activations[i-1]
 		output = n.Activations[i]
-		output.Reset()
 		weight := n.Weights[i]
 		bias := n.Biases[i]
 		if i == last {
@@ -299,6 +298,7 @@ func (n *Network) Predict(input []int16) float32 {
 		}
 
 		for j := uint32(0); j < output.Size(); j++ {
+			output.Data[j] = 0
 			for k := uint32(0); k < input.Size(); k++ {
 				output.Data[j] += input.Data[k] * weight.Get(j, k)
 			}
@@ -336,7 +336,6 @@ func (n *Network) UpdateGradients(input []int16) {
 
 	// First layer needs special care
 	for _, i := range input {
-
 		for j := uint32(0); j < err.Size(); j++ {
 			wGradients.Update(j, uint32(i), err.Data[j])
 		}
@@ -353,12 +352,11 @@ func (n *Network) UpdateGradients(input []int16) {
 		input := n.Activations[i-1]
 		err = n.Errors[i]
 
-		for j := uint32(0); j < bGradients.Size(); j++ {
+		for j := uint32(0); j < wGradients.Rows; j++ {
 			gradient := err.Data[j]
 			bGradients.Data[j].Update(gradient)
-
-			for k := uint32(0); k < input.Size(); k++ {
-				gradient := input.Data[k] * err.Data[j]
+			for k := uint32(0); k < wGradients.Cols; k++ {
+				gradient = input.Data[k] * err.Data[j]
 				wGradients.Update(j, k, gradient)
 			}
 		}

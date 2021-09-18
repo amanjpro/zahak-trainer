@@ -181,9 +181,6 @@ func (t *Trainer) Train(path string) {
 		t.ValidationCosts[epoch] = t.PrintCost()
 		t.TrainingCosts[epoch] = averageCost
 		fmt.Printf("Current training cost is: %f\n", averageCost)
-		if (epoch+1)%20 == 0 {
-			LearningRate /= 1.1
-		}
 		fmt.Println("Training and validation cost progression")
 		fmt.Println("==============================================================================")
 		fmt.Println("Epoch\t\t\t\tTraining Cost\t\t\t\tValidation Cost")
