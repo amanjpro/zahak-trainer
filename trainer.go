@@ -5,7 +5,6 @@ import (
 	"math/rand"
 	"os"
 	"runtime"
-	"sync/atomic"
 	"time"
 )
 
@@ -111,7 +110,7 @@ func (t *Trainer) PrintCost() float32 {
 
 func (t *Trainer) StartEpoch(startTime time.Time) float32 {
 	batchEnd := BatchSize
-	samples := int32(0)
+	samples := 0
 	totalCost := float32(0)
 	for batchEnd < len(*t.Training) {
 		newBatch := (*t.Training)[batchEnd-BatchSize : batchEnd]
@@ -121,26 +120,19 @@ func (t *Trainer) StartEpoch(startTime time.Time) float32 {
 			smallBatch := newBatch[i*miniBatchSize : (i+1)*miniBatchSize]
 			go func(main bool, n *Network, batch []Data, answer chan float32) {
 				localCost := float32(0)
-				localSamples := int32(0)
 				for d := 0; d < len(batch); d++ {
 					data := batch[d]
 					localCost += n.Train(data.Input, data.Score, data.Outcome)
-					localSamples++
-					if localSamples == 500 {
-						atomic.AddInt32(&samples, localSamples)
-						localSamples = 0
-						if main {
-							speed := float64(samples) / time.Since(startTime).Seconds()
-							fmt.Printf("\rTrained on %d samples [ %f samples / second ]", samples, speed)
-						}
-					}
 				}
 				answer <- localCost
 			}(i == 0, t.Nets[i], smallBatch, answers)
 		}
 		for i := 0; i < NumberOfThreads; i++ {
 			totalCost += <-answers
+			samples += miniBatchSize
 		}
+		speed := float64(samples) / time.Since(startTime).Seconds()
+		fmt.Printf("\rTrained on %d samples [ %f samples / second ]", samples, speed)
 		t.SyncGradients()
 		t.Nets[0].ApplyGradients()
 		t.CopyNets()
