@@ -26,6 +26,26 @@ func createNetwork() *Network {
 	return &net
 }
 
+func TestPredictPartialInput(t *testing.T) {
+	net := createNetwork()
+
+	net.Predict([]int16{0, 2, 3, 5, 6})
+
+	activations := [][]float32{
+		{6, 6, 6, 6},
+		fill(2, 25),
+		fill(1, Sigmoid(51)),
+	}
+
+	for i := 0; i < len(net.Activations); i++ {
+		expected := activations[i]
+		actual := net.Activations[i]
+		if !sameArray(expected, actual.Data) {
+			t.Errorf(fmt.Sprintf("Got %v, Expected %v", actual.Data, expected))
+		}
+	}
+}
+
 func TestPredict(t *testing.T) {
 	net := createNetwork()
 
@@ -67,6 +87,27 @@ func TestFindErrors(t *testing.T) {
 	}
 }
 
+func TestFindErrorsPartialInput(t *testing.T) {
+	net := createNetwork()
+
+	net.Predict([]int16{0, 2, 3, 5, 6})
+	net.FindErrors(0.5)
+
+	errors := [][]float32{
+		fill(4, ReLuPrime(6)),
+		fill(2, 0.5*ReLuPrime(25)),
+		fill(1, 0.5),
+	}
+
+	for i := 0; i < len(net.Activations); i++ {
+		expected := errors[i]
+		actual := net.Errors[i]
+		if !sameArray(expected, actual.Data) {
+			t.Errorf(fmt.Sprintf("Got %v, Expected %v", actual.Data, expected))
+		}
+	}
+}
+
 func TestUpdateGradients(t *testing.T) {
 	net := createNetwork()
 
@@ -94,6 +135,50 @@ func TestUpdateGradients(t *testing.T) {
 		fill(2, 0.5),
 		fill(1, 0.5),
 	}
+	for i := 0; i < len(net.Activations); i++ {
+		expected := bgrads[i]
+		actual := net.BGradients[i]
+		if !sameArray(expected, actual.Values()) {
+			t.Errorf(fmt.Sprintf("Got %v, Expected %v", actual.Values(), expected))
+		}
+	}
+}
+
+func TestGradientUpdatePartialInput(t *testing.T) {
+	net := createNetwork()
+
+	input := []int16{0, 2, 3, 5, 6}
+	net.Predict(input)
+	net.FindErrors(0.5)
+	net.UpdateGradients(input)
+
+	wgrads := [][]float32{
+		{1, 1, 1, 1,
+			0, 0, 0, 0,
+			1, 1, 1, 1,
+			1, 1, 1, 1,
+			0, 0, 0, 0,
+			1, 1, 1, 1,
+			1, 1, 1, 1,
+			0, 0, 0, 0},
+		fill(8, 3),
+		fill(2, 25*0.5),
+	}
+
+	for i := 0; i < len(net.Activations); i++ {
+		expected := wgrads[i]
+		actual := net.WGradients[i]
+		if !sameArray(expected, actual.Values()) {
+			t.Errorf(fmt.Sprintf("Got %v, Expected %v", actual.Values(), expected))
+		}
+	}
+
+	bgrads := [][]float32{
+		fill(4, ReLuPrime(6)),
+		fill(2, 0.5*ReLuPrime(25)),
+		fill(1, 0.5),
+	}
+
 	for i := 0; i < len(net.Activations); i++ {
 		expected := bgrads[i]
 		actual := net.BGradients[i]
@@ -160,6 +245,102 @@ func TestApplyGradients(t *testing.T) {
 		}
 	}
 
+	for i := 0; i < len(net.Activations); i++ {
+		bgrad := net.BGradients[i]
+		for _, g := range bgrad.Data {
+			if g.Value != 0 {
+				t.Errorf("Gradients do not reset")
+			}
+		}
+
+		wgrad := net.WGradients[i]
+		for _, g := range wgrad.Data {
+			if g.Value != 0 {
+				t.Errorf("Gradients do not reset")
+			}
+		}
+	}
+}
+
+func TestApplyGradientsPartialInput(t *testing.T) {
+	net := createNetwork()
+
+	input := []int16{0, 2, 3, 5, 6}
+	net.Predict(input)
+	net.FindErrors(0.5)
+	net.UpdateGradients(input)
+
+	wgrads := [][]float32{
+		{1, 1, 1, 1,
+			0, 0, 0, 0,
+			1, 1, 1, 1,
+			1, 1, 1, 1,
+			0, 0, 0, 0,
+			1, 1, 1, 1,
+			1, 1, 1, 1,
+			0, 0, 0, 0},
+		fill(8, 3),
+		fill(2, 25*0.5),
+	}
+
+	bgrads := [][]float32{
+		fill(4, ReLuPrime(6)),
+		fill(2, 0.5*ReLuPrime(25)),
+		fill(1, 0.5),
+	}
+
+	update := func(x float32, gv float32) float32 {
+		g := Gradient{Value: gv}
+		return x - g.Calculate()
+	}
+
+	applyAll := func(xs []float32, gs []float32) []float32 {
+		ys := make([]float32, len(xs))
+		for i := 0; i < len(xs); i++ {
+			ys[i] = update(xs[i], gs[i])
+		}
+		return ys
+	}
+
+	bExpected := make([][]float32, len(bgrads))
+	wExpected := make([][]float32, len(wgrads))
+
+	for i := 0; i < len(net.Activations); i++ {
+		wExpected[i] = applyAll(net.Weights[i].Data, wgrads[i])
+		bExpected[i] = applyAll(net.Biases[i].Data, bgrads[i])
+	}
+
+	net.ApplyGradients()
+
+	for i := 0; i < len(net.Activations); i++ {
+		expected := wExpected[i]
+		actual := net.Weights[i]
+		if !sameArray(expected, actual.Data) {
+			t.Errorf(fmt.Sprintf("Issues in weight update: Got %v, Expected %v", actual.Data, expected))
+		}
+
+		expected = bExpected[i]
+		actual = net.Biases[i]
+		if !sameArray(expected, actual.Data) {
+			t.Errorf(fmt.Sprintf("Issues in bias update: Got %v, Expected %v", actual.Data, expected))
+		}
+	}
+
+	for i := 0; i < len(net.Activations); i++ {
+		bgrad := net.BGradients[i]
+		for _, g := range bgrad.Data {
+			if g.Value != 0 {
+				t.Errorf("Gradients do not reset")
+			}
+		}
+
+		wgrad := net.WGradients[i]
+		for _, g := range wgrad.Data {
+			if g.Value != 0 {
+				t.Errorf("Gradients do not reset")
+			}
+		}
+	}
 }
 
 func TestGradientsDifferences(t *testing.T) {
@@ -194,7 +375,7 @@ func TestGradientsDifferences(t *testing.T) {
 		avg := (grad + net.WGradients[2].Data[changeIndex].Value) / 2
 
 		if (diff/avg)*100 >= 10 {
-			t.Errorf(fmt.Sprintf("Computed gradient is off: Got %v, Expected %v. Change is %f", net.WGradients[2].Data[changeIndex].Value, grad, diff/grad*100))
+			t.Errorf(fmt.Sprintf("Computed gradient is off: Got %v, Expected %v. Change is %f", net.WGradients[2].Data[changeIndex].Value, grad, (diff/grad)*100))
 		}
 	}
 }

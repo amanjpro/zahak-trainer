@@ -46,13 +46,12 @@ func (n *Network) Copy() *Network {
 	}
 	topology := n.Topology
 	inputSize := topology.Inputs
-	i := 0
 	net.Activations = make([]Matrix, len(topology.HiddenNeurons)+1)
 	net.Errors = make([]Matrix, len(topology.HiddenNeurons)+1)
 	net.WGradients = make([]Gradients, len(topology.HiddenNeurons)+1)
 	net.BGradients = make([]Gradients, len(topology.HiddenNeurons)+1)
 
-	for ; i < len(net.Activations); i++ {
+	for i := 0; i < len(net.Activations); i++ {
 		var outputSize uint32
 		if i == len(topology.HiddenNeurons) {
 			outputSize = topology.Outputs
@@ -290,24 +289,24 @@ func (n *Network) Predict(input []int16) float32 {
 	}
 	last := len(n.Activations) - 1
 
-	for i := 1; i < len(n.Activations); i++ {
-		input := n.Activations[i-1]
-		output = n.Activations[i]
-		weight := n.Weights[i]
-		bias := n.Biases[i]
-		if i == last {
+	for l := 1; l < len(n.Activations); l++ {
+		input := n.Activations[l-1]
+		output = n.Activations[l]
+		weight := n.Weights[l]
+		bias := n.Biases[l]
+		if l == last {
 			activationFn = Sigmoid
 		}
 
 		osize := output.Size()
-		for j := uint32(0); j < osize; j++ {
-			output.Data[j] = 0
+		for i := uint32(0); i < osize; i++ {
+			output.Data[i] = 0
 			isize := input.Size()
-			for k := uint32(0); k < isize; k++ {
-				output.Data[j] += input.Data[k] * weight.Get(j, k)
+			for j := uint32(0); j < isize; j++ {
+				output.Data[i] += input.Data[j] * weight.Get(i, j)
 			}
 
-			output.Data[j] = activationFn(output.Data[j] + bias.Data[j])
+			output.Data[i] = activationFn(output.Data[i] + bias.Data[i])
 		}
 	}
 
@@ -318,11 +317,11 @@ func (n *Network) FindErrors(outputGradient float32) {
 	last := len(n.Activations) - 1
 	n.Errors[last].Data[0] = outputGradient
 
-	for i := last - 1; i >= 0; i-- {
-		output := n.Activations[i]
-		weight := n.Weights[i+1]
-		outputError := n.Errors[i+1]
-		inputError := n.Errors[i]
+	for l := last - 1; l >= 0; l-- {
+		output := n.Activations[l]
+		weight := n.Weights[l+1]
+		outputError := n.Errors[l+1]
+		inputError := n.Errors[l]
 
 		isize := inputError.Size()
 		for i := uint32(0); i < isize; i++ {
@@ -353,19 +352,19 @@ func (n *Network) UpdateGradients(input []int16) {
 		bGradients.Data[j].Update(err.Data[j])
 	}
 
-	for i := 1; i < len(n.Activations); i++ {
+	for l := 1; l < len(n.Activations); l++ {
 
-		wGradients = n.WGradients[i]
-		bGradients = n.BGradients[i]
-		input := n.Activations[i-1]
-		err = n.Errors[i]
+		wGradients = n.WGradients[l]
+		bGradients = n.BGradients[l]
+		input := n.Activations[l-1]
+		err = n.Errors[l]
 
-		for j := uint32(0); j < wGradients.Rows; j++ {
-			gradient := err.Data[j]
-			bGradients.Data[j].Update(gradient)
-			for k := uint32(0); k < wGradients.Cols; k++ {
-				gradient = input.Data[k] * err.Data[j]
-				wGradients.Update(j, k, gradient)
+		for i := uint32(0); i < wGradients.Rows; i++ {
+			err := err.Data[i]
+			bGradients.Update(i, 0, err)
+			for j := uint32(0); j < wGradients.Cols; j++ {
+				gradient := input.Data[j] * err
+				wGradients.Update(i, j, gradient)
 			}
 		}
 	}
@@ -399,7 +398,7 @@ func (n *Network) ApplyGradients() {
 // randomly generate a float64 array
 func randomArray(size uint32, v float32) (data []float32) {
 	dist := distuv.Uniform{
-		Min: 0,
+		Min: 0.0 / math.Sqrt(float64(v)),
 		Max: 2.0 / math.Sqrt(float64(v)),
 	}
 
