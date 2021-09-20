@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"runtime"
 	"runtime/pprof"
@@ -73,6 +75,7 @@ func main() {
 	SigmoidScale = float32(*sigmoidScale)
 	LearningRate = float32(*learningRate)
 
+	go http.ListenAndServe("localhost:6060", nil)
 	dataset := LoadDataset(*epdPath)
 	trainer := NewTrainer(network, dataset, *epochs)
 	runtime.GC()

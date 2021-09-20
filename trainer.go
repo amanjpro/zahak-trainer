@@ -54,7 +54,15 @@ func NewTrainer(net Network, dataset []*Data, epochs int) *Trainer {
 
 func (t *Trainer) CopyNets() {
 	for i := 1; i < len(t.Nets); i++ {
-		t.Nets[i] = t.Nets[0].Copy()
+		t.Nets[i].Weights = t.Nets[0].Weights
+		t.Nets[i].Biases = t.Nets[0].Biases
+	}
+}
+
+func (t *Trainer) Shuffle() {
+	for i := 0; i < len(t.Training); i++ {
+		j := rand.Intn(len(t.Training))
+		t.Training[i], t.Training[j] = t.Training[j], t.Training[i]
 	}
 }
 
@@ -157,11 +165,14 @@ func (t *Trainer) Train(path string) {
 		t.TrainingCosts[epoch] = averageCost
 		fmt.Printf("Current training cost is: %f\n", averageCost)
 		fmt.Println("Training and validation cost progression")
-		fmt.Println("==============================================================================")
+		fmt.Println("===================================================================================")
 		fmt.Println("Epoch\t\t\t\tTraining Cost\t\t\t\tValidation Cost")
+		fmt.Println("===================================================================================")
 		for e := 0; e <= epoch; e++ {
 			fmt.Printf("%d\t\t\t\t%f\t\t\t\t%f\n", e+1, t.TrainingCosts[e], t.ValidationCosts[e])
 		}
-		fmt.Println("==============================================================================")
+		fmt.Println("===================================================================================")
+		fmt.Println("Shuffling training dataset")
+		t.Shuffle()
 	}
 }
