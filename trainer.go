@@ -15,8 +15,8 @@ type (
 
 	Trainer struct {
 		Nets            []*Network
-		Training        *[]Data
-		Validation      *[]Data
+		Training        []*Data
+		Validation      []*Data
 		Epochs          int
 		ValidationCosts []float32
 		TrainingCosts   []float32
@@ -34,18 +34,18 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func NewTrainer(net Network, dataset *[]Data, epochs int) *Trainer {
-	upperEnd := 80 * len(*dataset) / 100
-	training := (*dataset)[:upperEnd]
-	validation := (*dataset)[upperEnd:]
+func NewTrainer(net Network, dataset []*Data, epochs int) *Trainer {
+	upperEnd := 80 * len(dataset) / 100
+	training := (dataset)[:upperEnd]
+	validation := (dataset)[upperEnd:]
 	networks := make([]*Network, NumberOfThreads)
 	for i := 0; i < len(networks); i++ {
 		networks[i] = net.Copy()
 	}
 	return &Trainer{
 		Nets:            networks,
-		Training:        &training,
-		Validation:      &validation,
+		Training:        training,
+		Validation:      validation,
 		Epochs:          epochs,
 		TrainingCosts:   make([]float32, epochs),
 		ValidationCosts: make([]float32, epochs),
@@ -82,12 +82,12 @@ func (t *Trainer) PrintCost() float32 {
 	fmt.Printf("Starting the validation of the Epoch\n")
 	totalCost := float32(0)
 
-	batchSize := len(*t.Validation) / NumberOfThreads
+	batchSize := len(t.Validation) / NumberOfThreads
 	answer := make(chan float32)
 
 	for i := 0; i < NumberOfThreads; i++ {
-		batch := (*t.Validation)[i*batchSize : (i+1)*batchSize]
-		go func(n *Network, batch []Data, answer chan float32) {
+		batch := (t.Validation)[i*batchSize : (i+1)*batchSize]
+		go func(n *Network, batch []*Data, answer chan float32) {
 			localCost := float32(0)
 			for d := 0; d < len(batch); d++ {
 				data := batch[d]
@@ -103,7 +103,7 @@ func (t *Trainer) PrintCost() float32 {
 	for i := 0; i < NumberOfThreads; i++ {
 		totalCost += <-answer
 	}
-	averageCost := totalCost / float32(len(*t.Validation))
+	averageCost := totalCost / float32(len(t.Validation))
 	fmt.Printf("Current validation cost is: %f\n", averageCost)
 	return averageCost
 }
@@ -112,13 +112,13 @@ func (t *Trainer) StartEpoch(startTime time.Time) float32 {
 	batchEnd := BatchSize
 	samples := 0
 	totalCost := float32(0)
-	for batchEnd < len(*t.Training) {
-		newBatch := (*t.Training)[batchEnd-BatchSize : batchEnd]
+	for batchEnd < len(t.Training) {
+		newBatch := (t.Training)[batchEnd-BatchSize : batchEnd]
 		miniBatchSize := len(newBatch) / NumberOfThreads
 		answers := make(chan float32)
 		for i := 0; i < NumberOfThreads; i++ {
 			smallBatch := newBatch[i*miniBatchSize : (i+1)*miniBatchSize]
-			go func(main bool, n *Network, batch []Data, answer chan float32) {
+			go func(main bool, n *Network, batch []*Data, answer chan float32) {
 				localCost := float32(0)
 				for d := 0; d < len(batch); d++ {
 					data := batch[d]
@@ -146,13 +146,13 @@ func (t *Trainer) Train(path string) {
 	for epoch := 0; epoch < t.Epochs; epoch++ {
 		startTime := time.Now()
 		fmt.Printf("Started Epoch %d at %s\n", epoch, startTime.String())
-		fmt.Printf("Number of samples: %d\n", len(*t.Training))
+		fmt.Printf("Number of samples: %d\n", len(t.Training))
 		totalCost := t.StartEpoch(startTime)
 		fmt.Printf("\nFinished Epoch %d at %s, elapsed time %s\n", epoch, time.Now().String(), time.Since(startTime).String())
 		fmt.Printf("Storing This Epoch %d network\n", epoch+1)
 		t.Nets[0].Save(fmt.Sprintf("%s%cepoch-%d.nnue", path, os.PathSeparator, epoch+1))
 		fmt.Printf("Stored This Epoch %d's network\n", epoch+1)
-		averageCost := totalCost / float32(len(*t.Training))
+		averageCost := totalCost / float32(len(t.Training))
 		t.ValidationCosts[epoch] = t.PrintCost()
 		t.TrainingCosts[epoch] = averageCost
 		fmt.Printf("Current training cost is: %f\n", averageCost)
@@ -164,5 +164,4 @@ func (t *Trainer) Train(path string) {
 		}
 		fmt.Println("==============================================================================")
 	}
-
 }

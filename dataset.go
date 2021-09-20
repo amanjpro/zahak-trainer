@@ -17,14 +17,14 @@ type (
 	}
 )
 
-func LoadDataset(path string) *[]Data {
+func LoadDataset(path string) []*Data {
 	file, err := os.Open(path)
 	if err != nil {
 		panic(err)
 	}
 	defer file.Close()
 
-	data := make([]Data, 0, 58_671_054)
+	data := make([]*Data, 0, 53_907_348)
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -32,17 +32,18 @@ func LoadDataset(path string) *[]Data {
 		if line == "" {
 			break
 		}
-		data = append(data, ParseLine(line))
+		sample := ParseLine(line)
+		data = append(data, sample)
 	}
 
 	if err := scanner.Err(); err != nil {
 		panic(err)
 	}
 
-	return &data
+	return data
 }
 
-func ParseLine(line string) Data {
+func ParseLine(line string) *Data {
 	parts := strings.Split(line, ";")
 	if len(parts) != 5 {
 		panic(fmt.Sprintf("Bad line %s\n", line))
@@ -68,7 +69,7 @@ func ParseLine(line string) Data {
 	}
 	normalizedScore := Sigmoid(float32(score))
 
-	return Data{
+	return &Data{
 		Input:   pos,
 		Score:   normalizedScore,
 		Outcome: float32(outcome),
