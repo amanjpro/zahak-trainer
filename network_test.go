@@ -348,7 +348,7 @@ func TestGradientsDifferences(t *testing.T) {
 		top := NewTopology(768, 1, []uint32{128, 64})
 		net := CreateNetwork(top, 30)
 
-		line := "5k2/ppp5/4P3/3R3p/6P1/1K2Nr2/PP3P2/8 b - - 1 32;score:-0.720000;eval:50;qs:0;outcome:0.5"
+		line := "5k2/ppp5/4P3/3R3p/6P1/1K2Nr2/PP3P2/8 b - - 1 32;score:-72;eval:50;qs:0;outcome:0.5"
 		data := ParseLine(line)
 
 		net.Train(data.Input, data.Score, data.Outcome)

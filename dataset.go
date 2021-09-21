@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -24,7 +23,7 @@ func LoadDataset(path string) []*Data {
 	}
 	defer file.Close()
 
-	data := make([]*Data, 0, 53_907_348)
+	data := make([]*Data, 0, 2_000_100) //53_907_348)
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -55,12 +54,12 @@ func ParseLine(line string) *Data {
 	if len(scorePart) != 2 {
 		panic(fmt.Sprintf("Bad line %s\n", line))
 	}
-	score, err := strconv.ParseFloat(scorePart[1], 32)
+	score, err := strconv.Atoi(scorePart[1])
 	if err != nil {
 		panic(fmt.Sprintf("Bad line %s\n", line))
 	}
 
-	score = math.Max(math.Min(score*100, 2000), -2000)
+	score = clamp(-2000, score, 2000)
 
 	outcomePart := strings.Split(parts[4], ":")
 	outcome, err := strconv.ParseFloat(outcomePart[1], 32)
@@ -74,4 +73,15 @@ func ParseLine(line string) *Data {
 		Score:   normalizedScore,
 		Outcome: float32(outcome),
 	}
+}
+
+func clamp(lower, value, upper int) int {
+	if value > upper {
+		return upper
+	}
+
+	if value < lower {
+		return lower
+	}
+	return value
 }
