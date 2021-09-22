@@ -80,5 +80,5 @@ Usage of ./zahak-trainer:
 - Aryan Parekh the author of
   [Bit-Genie](https://github.com/Aryan1508/Bit-Genie) for helping me understand
   the basics of
-  NN and NNUE, and sticking with me and readily available for answer my
-  qeustions until the very end.
+  NN and NNUE, and sticking with me and patiently available for answering all my
+  (stupid) qeustions until the very end.
