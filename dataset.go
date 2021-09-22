@@ -43,30 +43,36 @@ func LoadDataset(path string) []*Data {
 }
 
 func ParseLine(line string) *Data {
-	parts := strings.Split(line, ";")
-	if len(parts) != 5 {
+	startIndex := 0
+	endIndex := strings.Index(line, ";")
+	if endIndex == -1 {
 		panic(fmt.Sprintf("Bad line %s\n", line))
 	}
 
-	pos := FromFen(parts[0])
+	pos := FromFen(strings.TrimSpace(line[:endIndex]))
 
-	scorePart := strings.Split(parts[1], ":")
-	if len(scorePart) != 2 {
+	startIndex = endIndex + 7
+	endIndex = strings.Index(line, ";eval")
+	if endIndex == -1 {
 		panic(fmt.Sprintf("Bad line %s\n", line))
 	}
-	score, err := strconv.Atoi(scorePart[1])
+
+	score, err := strconv.Atoi(strings.TrimSpace(line[startIndex:endIndex]))
 	if err != nil {
-		panic(fmt.Sprintf("Bad line %s\n", line))
+		panic(fmt.Sprintf("Bad line %s\n%s\n", line, err))
 	}
 
 	score = clamp(-2000, score, 2000)
-
-	outcomePart := strings.Split(parts[4], ":")
-	outcome, err := strconv.ParseFloat(outcomePart[1], 32)
-	if err != nil {
-		panic(fmt.Sprintf("Bad line %s\n", line))
-	}
 	normalizedScore := Sigmoid(float32(score))
+
+	startIndex = strings.Index(line, ";outcome:") + 9
+	if startIndex == -1 {
+		panic(fmt.Sprintf("Bad line %s\n%s\n", line, err))
+	}
+	outcome, err := strconv.ParseFloat(strings.TrimSpace(line[startIndex:]), 32)
+	if err != nil {
+		panic(fmt.Sprintf("Bad line %s\n%s\n", line, err))
+	}
 
 	return &Data{
 		Input:   pos,
