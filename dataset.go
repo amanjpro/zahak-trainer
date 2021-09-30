@@ -23,7 +23,7 @@ func LoadDataset(path string) []*Data {
 	}
 	defer file.Close()
 
-	data := make([]*Data, 0, 2_000_100) //53_907_348)
+	data := make([]*Data, 0, 57_220_422)
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -62,7 +62,6 @@ func ParseLine(line string) *Data {
 		panic(fmt.Sprintf("Bad line %s\n%s\n", line, err))
 	}
 
-	score = clamp(-2000, score, 2000)
 	normalizedScore := Sigmoid(float32(score))
 
 	startIndex = strings.Index(line, ";outcome:") + 9

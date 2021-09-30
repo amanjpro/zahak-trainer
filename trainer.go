@@ -24,7 +24,7 @@ type (
 )
 
 var (
-	SigmoidScale    float32 = 2.5 / 1024
+	SigmoidScale    float32 = 3.5 / 1024
 	LearningRate    float32 = 0.01
 	NumberOfThreads         = runtime.NumCPU()
 	BatchSize               = 16384
@@ -170,6 +170,9 @@ func (t *Trainer) Train(path string) {
 		fmt.Println("===================================================================================")
 		for e := 0; e <= epoch; e++ {
 			fmt.Printf("%d\t\t\t\t%f\t\t\t\t%f\n", e+1, t.TrainingCosts[e], t.ValidationCosts[e])
+		}
+		if (epoch+1)%20 == 0 {
+			LearningRate /= 1.1
 		}
 		fmt.Println("===================================================================================")
 		fmt.Println("Shuffling training dataset")
