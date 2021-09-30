@@ -1,0 +1,41 @@
+name: Create Release
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - '*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
+jobs:
+  build:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+      - name: Set env
+        run: echo "TAG_NAME=$(echo ${{github.ref}} | sed 's/refs\/tags\///g')" >> $GITHUB_ENV
+      - name: Test
+        run: |
+          go test ./...
+      - name: Distribute
+        run: |
+          mkdir bin
+          GOOS=linux GOARCH=amd64 go build -o bin ./... && mv bin/zahak-trainer bin/zahak-trainer-linux-amd64-"$TAG_NAME"
+          GOOS=darwin GOARCH=amd64 go build -o bin ./... && mv bin/zahak-trainer bin/zahak-trainer-darwin-amd64-"$TAG_NAME"
+          GOOS=windows GOARCH=amd64 go build -o bin ./... && mv bin/zahak-trainer.exe bin/zahak-trainer-windows-amd64-"$TAG_NAME".exe
+      - name: Create Release and Upload Assets
+        id: create-release-and-upload-asset
+        run: |
+          set -x
+          assets=()
+          for asset in bin/zahak-trainer-*; do
+            assets+=("-a" "$asset")
+          done
+          tag_name="$TAG_NAME"
+          hub release create "${assets[@]}" -m "$tag_name" "$tag_name"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
