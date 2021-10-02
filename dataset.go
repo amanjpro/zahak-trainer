@@ -16,27 +16,29 @@ type (
 	}
 )
 
-func LoadDataset(path string) []*Data {
-	file, err := os.Open(path)
-	if err != nil {
-		panic(err)
-	}
-	defer file.Close()
-
+func LoadDataset(paths string) []*Data {
+	pathsArray := strings.Split(paths, ",")
 	data := make([]*Data, 0, 57_220_422)
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line == "" {
-			break
+	for _, path := range pathsArray {
+		file, err := os.Open(path)
+		if err != nil {
+			panic(err)
 		}
-		sample := ParseLine(line)
-		data = append(data, sample)
-	}
+		defer file.Close()
 
-	if err := scanner.Err(); err != nil {
-		panic(err)
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			line := scanner.Text()
+			if line == "" {
+				break
+			}
+			sample := ParseLine(line)
+			data = append(data, sample)
+		}
+
+		if err := scanner.Err(); err != nil {
+			panic(err)
+		}
 	}
 
 	return data

@@ -57,7 +57,7 @@ Usage of ./zahak-trainer:
   -hiddens string
       Number of hidden neurons, for multi-layer you can send comma separated numbers (default "128")
   -input-path string
-      Path to input dataset (FENs)
+      Path to input dataset (FENs), for multiple files send a comma separated set of files
   -inputs int
       Number of inputs (default 768)
   -lr float

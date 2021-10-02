@@ -31,7 +31,7 @@ func main() {
 	learningRate := flag.Float64("lr", float64(LearningRate), "Learning Rate")
 	sigmoidScale := flag.Float64("sigmoid-scale", float64(SigmoidScale), "Sigmoid scale")
 	networkId := flag.Int("network-id", int(uint32(rand.Int())), "A unique id for the network")
-	epdPath := flag.String("input-path", "", "Path to input dataset (FENs)")
+	epdPath := flag.String("input-path", "", "Path to input dataset (FENs), for multiple files send a comma separated set of files")
 	startNet := flag.String("from-net", "", "Path to a network, to be used as a starting point")
 	binPath := flag.String("output-path", "", "Final NNUE path directory")
 
