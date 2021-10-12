@@ -155,13 +155,19 @@ var ranks = []Square{A8, A7, A6, A5, A4, A3, A2, A1}
 func FromFen(fen string) []int16 {
 
 	length := 0
+	spacesCount := 0
 	for i := 0; i < len(fen); i++ {
 		ch := rune(fen[i])
 		if ch == ' ' {
-			break
+			if spacesCount >= 1 {
+				break
+			}
+			spacesCount += 1
 		}
 
-		if ('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z') {
+		if ch == 'w' {
+			length++
+		} else if spacesCount == 0 && ('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z') {
 			length++
 		}
 	}
@@ -170,9 +176,11 @@ func FromFen(fen string) []int16 {
 	rank := 0
 	boardIndex := A8
 	pieceCounts := 0
+	finalIndex := 0
 	for i := 0; i < len(fen); i++ {
 		ch := rune(fen[i])
 		if ch == ' ' || rank >= len(ranks) {
+			finalIndex = i
 			break // end of the board
 		} else if unicode.IsDigit(ch) {
 			n, _ := strconv.Atoi(string(ch))
@@ -189,6 +197,9 @@ func FromFen(fen string) []int16 {
 			panic(fmt.Sprintf("Invalid FEN notation %s, boardIndex == %d, parsing %s\n",
 				fen, boardIndex, string(ch)))
 		}
+	}
+	if fen[finalIndex+1] == 'w' {
+		input[len(input)-1] = 768
 	}
 
 	return input
