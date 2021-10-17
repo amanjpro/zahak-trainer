@@ -2,7 +2,9 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -26,9 +28,23 @@ func LoadDataset(paths string) []*Data {
 		}
 		defer file.Close()
 
-		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			line := scanner.Text()
+		reader := bufio.NewReader(file)
+		skipNext := false
+		for true {
+			buf, pre, err := reader.ReadLine()
+			if errors.Is(err, io.EOF) {
+				break
+			} else if err != nil {
+				panic(err)
+			}
+			if pre {
+				continue
+			} else if skipNext {
+				skipNext = false
+				continue
+			}
+			skipNext = pre
+			line := string(buf)
 			if line == "" {
 				break
 			}
@@ -36,9 +52,6 @@ func LoadDataset(paths string) []*Data {
 			data = append(data, sample)
 		}
 
-		if err := scanner.Err(); err != nil {
-			panic(err)
-		}
 	}
 
 	return data
@@ -51,7 +64,7 @@ func ParseLine(line string) *Data {
 		panic(fmt.Sprintf("Bad line %s\n", line))
 	}
 
-	pos := FromFen(strings.TrimSpace(line[:endIndex]))
+	pos := FromFen(line[:endIndex])
 
 	startIndex = endIndex + 7
 	endIndex = strings.Index(line, ";eval")
@@ -59,7 +72,7 @@ func ParseLine(line string) *Data {
 		panic(fmt.Sprintf("Bad line %s\n", line))
 	}
 
-	score, err := strconv.Atoi(strings.TrimSpace(line[startIndex:endIndex]))
+	score, err := strconv.Atoi(line[startIndex:endIndex])
 	if err != nil {
 		panic(fmt.Sprintf("Bad line %s\n%s\n", line, err))
 	}
@@ -70,7 +83,7 @@ func ParseLine(line string) *Data {
 	if startIndex == -1 {
 		panic(fmt.Sprintf("Bad line %s\n%s\n", line, err))
 	}
-	outcome, err := strconv.ParseFloat(strings.TrimSpace(line[startIndex:]), 32)
+	outcome, err := strconv.ParseFloat(line[startIndex:], 32)
 	if err != nil {
 		panic(fmt.Sprintf("Bad line %s\n%s\n", line, err))
 	}

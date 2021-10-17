@@ -35,6 +35,10 @@ func init() {
 }
 
 func NewTrainer(net Network, dataset []*Data, epochs int) *Trainer {
+	for i := 0; i < len(dataset); i++ {
+		j := rand.Intn(len(dataset))
+		dataset[i], dataset[j] = dataset[j], dataset[i]
+	}
 	upperEnd := 80 * len(dataset) / 100
 	training := (dataset)[:upperEnd]
 	validation := (dataset)[upperEnd:]
@@ -152,8 +156,6 @@ func (t *Trainer) StartEpoch(startTime time.Time) float32 {
 
 func (t *Trainer) Train(path string) {
 	for epoch := 0; epoch < t.Epochs; epoch++ {
-		fmt.Println("Shuffling training dataset")
-		t.Shuffle()
 		startTime := time.Now()
 		fmt.Printf("Started Epoch %d at %s\n", epoch, startTime.String())
 		fmt.Printf("Number of samples: %d\n", len(t.Training))
@@ -177,5 +179,7 @@ func (t *Trainer) Train(path string) {
 			LearningRate /= 1.1
 		}
 		fmt.Println("===================================================================================")
+		fmt.Println("Shuffling training dataset")
+		t.Shuffle()
 	}
 }

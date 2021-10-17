@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"strconv"
-	"strings"
 	"unicode"
 )
 
@@ -154,16 +153,13 @@ func pieceFromName(name rune) Piece {
 var ranks = []Square{A8, A7, A6, A5, A4, A3, A2, A1}
 
 func FromFen(fen string) []int16 {
-	words := strings.Split(fen, " ")
-	if len(words) != 6 {
-		panic(fmt.Sprintf("Expected 6 parts of the FEN, got %s\n", fen))
-	}
 
 	input := make([]int16, 0, 32)
 
 	rank := 0
 	boardIndex := A8
-	for _, ch := range words[0] {
+	for i := 0; i < len(fen); i++ {
+		ch := rune(fen[i])
 		if ch == ' ' || rank >= len(ranks) {
 			break // end of the board
 		} else if unicode.IsDigit(ch) {
