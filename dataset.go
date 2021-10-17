@@ -97,7 +97,7 @@ func ParseLine(line string) Data {
 		panic(fmt.Sprintf("Bad line %s\n", line))
 	}
 
-	pos := FromFen(line[:endIndex])
+	pos, wtm := FromFen(line[:endIndex])
 
 	startIndex = endIndex + 7
 	endIndex = strings.Index(line, ";eval")
@@ -121,20 +121,18 @@ func ParseLine(line string) Data {
 		panic(fmt.Sprintf("Bad line %s\n%s\n", line, err))
 	}
 
+	if !wtm {
+		score *= -1
+		if outcome == 0 {
+			outcome = 1
+		} else if outcome == 1 {
+			outcome = 0
+		}
+	}
+
 	return Data{
 		Input:   pos,
 		Score:   normalizedScore,
 		Outcome: float32(outcome),
 	}
-}
-
-func clamp(lower, value, upper int) int {
-	if value > upper {
-		return upper
-	}
-
-	if value < lower {
-		return lower
-	}
-	return value
 }
