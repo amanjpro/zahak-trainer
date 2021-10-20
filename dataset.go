@@ -19,9 +19,35 @@ type (
 	}
 )
 
+func countSamples(paths []string) int64 {
+	count := int64(0)
+	countLines := func(f *os.File) int64 {
+		input := bufio.NewScanner(f)
+		for input.Scan() {
+			count++
+			if err := input.Err(); err != nil {
+				panic(err)
+			}
+		}
+
+		return count
+	}
+	for _, path := range paths {
+		file, err := os.Open(path)
+		if err != nil {
+			panic(err)
+		}
+		defer file.Close()
+		count += countLines(file)
+	}
+
+	return count
+}
+
 func LoadDataset(paths string) []Data {
 	pathsArray := strings.Split(paths, ",")
-	data := make([]Data, 0, 57_220_422)
+	data := make([]Data, countSamples(pathsArray))
+	samples := 0
 	for _, path := range pathsArray {
 		file, err := os.Open(path)
 		if err != nil {
@@ -50,7 +76,8 @@ func LoadDataset(paths string) []Data {
 				break
 			}
 			sample := ParseLine(line)
-			data = append(data, sample)
+			data[samples] = sample
+			samples += 1
 		}
 	}
 
