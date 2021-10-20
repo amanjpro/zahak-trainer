@@ -19,9 +19,9 @@ type (
 	}
 )
 
-func LoadDataset(paths string) []*Data {
+func LoadDataset(paths string) []Data {
 	pathsArray := strings.Split(paths, ",")
-	data := make([]*Data, 0, 57_220_422)
+	data := make([]Data, 0, 57_220_422)
 	for _, path := range pathsArray {
 		file, err := os.Open(path)
 		if err != nil {
@@ -52,7 +52,6 @@ func LoadDataset(paths string) []*Data {
 			sample := ParseLine(line)
 			data = append(data, sample)
 		}
-
 	}
 
 	runtime.GC()
@@ -60,7 +59,7 @@ func LoadDataset(paths string) []*Data {
 	return data
 }
 
-func ParseLine(line string) *Data {
+func ParseLine(line string) Data {
 	startIndex := 0
 	endIndex := strings.Index(line, ";")
 	if endIndex == -1 {
@@ -91,7 +90,7 @@ func ParseLine(line string) *Data {
 		panic(fmt.Sprintf("Bad line %s\n%s\n", line, err))
 	}
 
-	return &Data{
+	return Data{
 		Input:   pos,
 		Score:   normalizedScore,
 		Outcome: float32(outcome),
