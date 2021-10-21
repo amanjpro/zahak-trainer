@@ -20,8 +20,10 @@ type (
 )
 
 func countSamples(paths []string) int64 {
-	count := int64(0)
+	fmt.Printf("Paths to load %s\n", paths)
+	totalCount := int64(0)
 	countLines := func(f *os.File) int64 {
+		count := int64(0)
 		input := bufio.NewScanner(f)
 		for input.Scan() {
 			count++
@@ -38,10 +40,12 @@ func countSamples(paths []string) int64 {
 			panic(err)
 		}
 		defer file.Close()
-		count += countLines(file)
+		totalCount += countLines(file)
 	}
 
-	return count
+	fmt.Printf("Loading %d samples\n", totalCount)
+
+	return totalCount
 }
 
 func LoadDataset(paths string) []Data {
