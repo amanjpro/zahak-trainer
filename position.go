@@ -154,10 +154,22 @@ var ranks = []Square{A8, A7, A6, A5, A4, A3, A2, A1}
 
 func FromFen(fen string) []int16 {
 
-	input := make([]int16, 0, 32)
+	length := 0
+	for i := 0; i < len(fen); i++ {
+		ch := rune(fen[i])
+		if ch == ' ' {
+			break
+		}
+
+		if ('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z') {
+			length++
+		}
+	}
+	input := make([]int16, length)
 
 	rank := 0
 	boardIndex := A8
+	pieceCounts := 0
 	for i := 0; i < len(fen); i++ {
 		ch := rune(fen[i])
 		if ch == ' ' || rank >= len(ranks) {
@@ -170,7 +182,8 @@ func FromFen(fen string) []int16 {
 			boardIndex = ranks[rank]
 			continue
 		} else if p := pieceFromName(ch); p != NoPiece {
-			input = append(input, int16(p)*64+int16(boardIndex))
+			input[pieceCounts] = int16(p)*64 + int16(boardIndex)
+			pieceCounts++
 			boardIndex++
 		} else {
 			panic(fmt.Sprintf("Invalid FEN notation %s, boardIndex == %d, parsing %s\n",

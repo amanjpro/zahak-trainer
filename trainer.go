@@ -15,8 +15,8 @@ type (
 
 	Trainer struct {
 		Nets            []*Network
-		Training        []*Data
-		Validation      []*Data
+		Training        []Data
+		Validation      []Data
 		Epochs          int
 		ValidationCosts []float32
 		TrainingCosts   []float32
@@ -34,7 +34,7 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func NewTrainer(net Network, dataset []*Data, epochs int) *Trainer {
+func NewTrainer(net Network, dataset []Data, epochs int) *Trainer {
 	for i := 0; i < len(dataset); i++ {
 		j := rand.Intn(len(dataset))
 		dataset[i], dataset[j] = dataset[j], dataset[i]
@@ -99,7 +99,7 @@ func (t *Trainer) PrintCost() float32 {
 
 	for i := 0; i < NumberOfThreads; i++ {
 		batch := (t.Validation)[i*batchSize : (i+1)*batchSize]
-		go func(n *Network, batch []*Data, answer chan float32) {
+		go func(n *Network, batch []Data, answer chan float32) {
 			localCost := float32(0)
 			for d := 0; d < len(batch); d++ {
 				data := batch[d]
@@ -130,7 +130,7 @@ func (t *Trainer) StartEpoch(startTime time.Time) float32 {
 		answers := make(chan float32)
 		for i := 0; i < NumberOfThreads; i++ {
 			smallBatch := newBatch[i*miniBatchSize : (i+1)*miniBatchSize]
-			go func(main bool, n *Network, batch []*Data, answer chan float32) {
+			go func(main bool, n *Network, batch []Data, answer chan float32) {
 				localCost := float32(0)
 				for d := 0; d < len(batch); d++ {
 					data := batch[d]
