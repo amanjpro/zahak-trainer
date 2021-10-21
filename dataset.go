@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 )
@@ -53,6 +54,8 @@ func LoadDataset(paths string) []*Data {
 		}
 
 	}
+
+	runtime.GC()
 
 	return data
 }

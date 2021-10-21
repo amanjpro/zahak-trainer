@@ -157,10 +157,10 @@ func (t *Trainer) StartEpoch(startTime time.Time) float32 {
 func (t *Trainer) Train(path string) {
 	for epoch := 0; epoch < t.Epochs; epoch++ {
 		startTime := time.Now()
-		fmt.Printf("Started Epoch %d at %s\n", epoch, startTime.String())
+		fmt.Printf("Started Epoch %d at %s\n", epoch+1, startTime.String())
 		fmt.Printf("Number of samples: %d\n", len(t.Training))
 		totalCost := t.StartEpoch(startTime)
-		fmt.Printf("\nFinished Epoch %d at %s, elapsed time %s\n", epoch, time.Now().String(), time.Since(startTime).String())
+		fmt.Printf("\nFinished Epoch %d at %s, elapsed time %s\n", epoch+1, time.Now().String(), time.Since(startTime).String())
 		fmt.Printf("Storing This Epoch %d network\n", epoch+1)
 		t.Nets[0].Save(fmt.Sprintf("%s%cepoch-%d.nnue", path, os.PathSeparator, epoch+1))
 		fmt.Printf("Stored This Epoch %d's network\n", epoch+1)
@@ -181,5 +181,6 @@ func (t *Trainer) Train(path string) {
 		fmt.Println("===================================================================================")
 		fmt.Println("Shuffling training dataset")
 		t.Shuffle()
+		runtime.GC()
 	}
 }
