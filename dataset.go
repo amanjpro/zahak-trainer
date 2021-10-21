@@ -98,6 +98,7 @@ func ParseLine(line string) Data {
 	}
 
 	pos := FromFen(line[:endIndex])
+	wm := pos[len(pos)-1] == 768
 
 	startIndex = endIndex + 7
 	endIndex = strings.Index(line, ";eval")
@@ -110,8 +111,6 @@ func ParseLine(line string) Data {
 		panic(fmt.Sprintf("Bad line %s\n%s\n", line, err))
 	}
 
-	// normalizedScore := Sigmoid(float32(score))
-
 	startIndex = strings.Index(line, ";outcome:") + 9
 	if startIndex == -1 {
 		panic(fmt.Sprintf("Bad line %s\n%s\n", line, err))
@@ -123,6 +122,15 @@ func ParseLine(line string) Data {
 		outcome = 2
 	} else {
 		outcome = 1
+	}
+
+	if !wm {
+		score *= -1
+		if outcome == 2 {
+			outcome = 0
+		} else if outcome == 0 {
+			outcome = 2
+		}
 	}
 
 	return Data{
