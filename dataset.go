@@ -110,8 +110,6 @@ func ParseLine(line string) Data {
 		panic(fmt.Sprintf("Bad line %s\n%s\n", line, err))
 	}
 
-	normalizedScore := Sigmoid(float32(score))
-
 	startIndex = strings.Index(line, ";outcome:") + 9
 	if startIndex == -1 {
 		panic(fmt.Sprintf("Bad line %s\n%s\n", line, err))
@@ -130,6 +128,7 @@ func ParseLine(line string) Data {
 		}
 	}
 
+	normalizedScore := Sigmoid(float32(score))
 	return Data{
 		Input:   pos,
 		Score:   normalizedScore,
