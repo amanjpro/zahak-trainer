@@ -120,6 +120,14 @@ const (
 	NoPiece
 )
 
+func (p Piece) Flip() Piece {
+	if p < BlackPawn {
+		return p + BlackPawn
+	} else {
+		return p - BlackPawn
+	}
+}
+
 func pieceFromName(name rune) Piece {
 	switch name {
 	case 'P':
@@ -152,19 +160,35 @@ func pieceFromName(name rune) Piece {
 
 var ranks = []Square{A8, A7, A6, A5, A4, A3, A2, A1}
 
-func FromFen(fen string) []int16 {
+func FromFen(fen string) ([]int16, bool) {
 
 	length := 0
+	whiteToMove := false
+	stop := false
+	seenSpace := false
 	for i := 0; i < len(fen); i++ {
-		ch := rune(fen[i])
-		if ch == ' ' {
+		if stop {
 			break
 		}
 
-		if ('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z') {
+		ch := rune(fen[i])
+		if ch == ' ' {
+			seenSpace = true
+			continue
+		}
+
+		if seenSpace {
+			if ch == 'w' {
+				whiteToMove = true
+				stop = true
+			} else if ch == 'b' {
+				stop = true
+			}
+		} else if ('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z') {
 			length++
 		}
 	}
+
 	input := make([]int16, length)
 
 	rank := 0
@@ -182,7 +206,11 @@ func FromFen(fen string) []int16 {
 			boardIndex = ranks[rank]
 			continue
 		} else if p := pieceFromName(ch); p != NoPiece {
-			input[pieceCounts] = int16(p)*64 + int16(boardIndex)
+			if whiteToMove {
+				input[pieceCounts] = int16(p)*64 + int16(boardIndex)
+			} else {
+				input[pieceCounts] = int16(p.Flip())*64 + int16(boardIndex^56)
+			}
 			pieceCounts++
 			boardIndex++
 		} else {
@@ -191,5 +219,5 @@ func FromFen(fen string) []int16 {
 		}
 	}
 
-	return input
+	return input, whiteToMove
 }

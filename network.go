@@ -108,7 +108,7 @@ func CreateNetwork(topology Topology, id uint32) (net Network) {
 // - The magic number/version consists of 4 bytes (int32):
 //   - 66 (which is the ASCII code for B), uint8
 //   - 90 (which is the ASCII code for Z), uint8
-//   - 1 The major part of the current version number, uint8
+//   - 2 The major part of the current version number, uint8
 //   - 0 The minor part of the current version number, uint8
 // - 4 bytes (int32) to denote the network ID
 // - 4 bytes (int32) to denote input size
@@ -125,7 +125,7 @@ func (n *Network) Save(file string) {
 	defer f.Close()
 
 	// Write headers
-	buf := []byte{66, 90, 1, 0}
+	buf := []byte{66, 90, 2, 0}
 	_, err = f.Write(buf)
 	if err != nil {
 		panic(err)
