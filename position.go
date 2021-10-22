@@ -120,6 +120,14 @@ const (
 	NoPiece
 )
 
+func (p Piece) Flip() Piece {
+	if p < BlackPawn {
+		return p + BlackPawn
+	} else {
+		return p - BlackPawn
+	}
+}
+
 func pieceFromName(name rune) Piece {
 	switch name {
 	case 'P':
@@ -198,7 +206,11 @@ func FromFen(fen string) ([]int16, bool) {
 			boardIndex = ranks[rank]
 			continue
 		} else if p := pieceFromName(ch); p != NoPiece {
-			input[pieceCounts] = int16(p)*64 + int16(boardIndex)
+			if whiteToMove {
+				input[pieceCounts] = int16(p)*64 + int16(boardIndex)
+			} else {
+				input[pieceCounts] = int16(p.Flip())*64 + int16(boardIndex^56)
+			}
 			pieceCounts++
 			boardIndex++
 		} else {
