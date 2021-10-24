@@ -39,9 +39,9 @@ func NewTrainer(net Network, dataset []Data, epochs int) *Trainer {
 		j := rand.Intn(len(dataset))
 		dataset[i], dataset[j] = dataset[j], dataset[i]
 	}
-	upperEnd := 80 * len(dataset) / 100
-	training := (dataset)[:upperEnd]
-	validation := (dataset)[upperEnd:]
+	validationSize := min(20*len(dataset)/100, 5_000_000)
+	validation := (dataset)[:validationSize]
+	training := (dataset)[validationSize:]
 	networks := make([]*Network, NumberOfThreads)
 	for i := 0; i < len(networks); i++ {
 		networks[i] = net.Copy()
@@ -105,7 +105,7 @@ func (t *Trainer) PrintCost() float32 {
 				data := batch[d]
 
 				predicted := n.Predict(data.Input)
-				cost := ValidationCost(predicted, data.Score, data.Outcome)
+				cost := ValidationCost(predicted, Sigmoid(float32(data.Score)), float32(data.Outcome)/2)
 
 				localCost += cost
 			}
@@ -134,7 +134,7 @@ func (t *Trainer) StartEpoch(startTime time.Time) float32 {
 				localCost := float32(0)
 				for d := 0; d < len(batch); d++ {
 					data := batch[d]
-					localCost += n.Train(data.Input, data.Score, data.Outcome)
+					localCost += n.Train(data.Input, Sigmoid(float32(data.Score)), float32(data.Outcome)/2)
 				}
 				answer <- localCost
 			}(i == 0, t.Nets[i], smallBatch, answers)
@@ -175,12 +175,19 @@ func (t *Trainer) Train(path string) {
 		for e := 0; e <= epoch; e++ {
 			fmt.Printf("%d\t\t\t\t%f\t\t\t\t%f\n", e+1, t.TrainingCosts[e], t.ValidationCosts[e])
 		}
-		if (epoch+1)%20 == 0 {
-			LearningRate /= 1.1
-		}
+		// if (epoch+1)%20 == 0 {
+		// 	LearningRate /= 1.1
+		// }
 		fmt.Println("===================================================================================")
 		fmt.Println("Shuffling training dataset")
 		t.Shuffle()
 		runtime.GC()
 	}
+}
+
+func min(x, y int) int {
+	if x > y {
+		return y
+	}
+	return x
 }

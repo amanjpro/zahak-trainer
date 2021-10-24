@@ -14,8 +14,8 @@ import (
 type (
 	Data struct {
 		Input   []int16
-		Score   float32
-		Outcome float32
+		Score   int16
+		Outcome int8
 	}
 )
 
@@ -110,31 +110,24 @@ func ParseLine(line string) Data {
 		panic(fmt.Sprintf("Bad line %s\n%s\n", line, err))
 	}
 
-	normalizedScore := Sigmoid(float32(score))
+	// normalizedScore := Sigmoid(float32(score))
 
 	startIndex = strings.Index(line, ";outcome:") + 9
 	if startIndex == -1 {
 		panic(fmt.Sprintf("Bad line %s\n%s\n", line, err))
 	}
-	outcome, err := strconv.ParseFloat(line[startIndex:], 32)
-	if err != nil {
-		panic(fmt.Sprintf("Bad line %s\n%s\n", line, err))
+	var outcome int8
+	if line[startIndex:] == "0.0" {
+		outcome = 0
+	} else if line[startIndex:] == "1.0" {
+		outcome = 2
+	} else {
+		outcome = 1
 	}
 
 	return Data{
 		Input:   pos,
-		Score:   normalizedScore,
-		Outcome: float32(outcome),
+		Score:   int16(score),
+		Outcome: outcome,
 	}
-}
-
-func clamp(lower, value, upper int) int {
-	if value > upper {
-		return upper
-	}
-
-	if value < lower {
-		return lower
-	}
-	return value
 }

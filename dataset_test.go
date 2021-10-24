@@ -9,11 +9,11 @@ func TestParseLine(t *testing.T) {
 
 	data := ParseLine(line)
 
-	if data.Score != Sigmoid(342) {
-		t.Errorf("Score is parsed wrong, expected %f, got %f", Sigmoid(342), data.Score)
+	if data.Score != 342 {
+		t.Errorf("Score is parsed wrong, expected %d, got %d", 342, data.Score)
 	}
-	if data.Outcome != 1.0 {
-		t.Errorf("Outcome is parsed wrong, expected %f, got %f", 1.0, data.Outcome)
+	if data.Outcome != 2 {
+		t.Errorf("Outcome is parsed wrong, expected %d, got %d", 2, data.Outcome)
 	}
 	expected := []int16{
 		632, 505, 570, 699, 764, 573, 510, 639,
