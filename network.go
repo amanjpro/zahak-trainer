@@ -108,7 +108,7 @@ func CreateNetwork(topology Topology, id uint32) (net Network) {
 // - The magic number/version consists of 4 bytes (int32):
 //   - 66 (which is the ASCII code for B), uint8
 //   - 90 (which is the ASCII code for Z), uint8
-//   - 1 The major part of the current version number, uint8
+//   - 2 The major part of the current version number, uint8
 //   - 0 The minor part of the current version number, uint8
 // - 4 bytes (int32) to denote the network ID
 // - 4 bytes (int32) to denote input size
@@ -125,7 +125,7 @@ func (n *Network) Save(file string) {
 	defer f.Close()
 
 	// Write headers
-	buf := []byte{66, 90, 1, 0}
+	buf := []byte{66, 90, 2, 0}
 	_, err = f.Write(buf)
 	if err != nil {
 		panic(err)
@@ -187,8 +187,12 @@ func Load(path string) Network {
 	if err != nil {
 		panic(err)
 	}
-	if buf[0] != 66 || buf[1] != 90 || buf[2] != 1 || buf[3] != 0 {
+	if buf[0] != 66 || buf[1] != 90 {
 		panic("Magic word does not match expected, exiting")
+	}
+
+	if buf[2] != 2 || buf[3] != 0 {
+		panic("Network binary format is not supported")
 	}
 
 	_, err = io.ReadFull(f, buf)

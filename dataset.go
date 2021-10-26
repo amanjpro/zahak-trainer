@@ -98,7 +98,7 @@ func ParseLine(line string) Data {
 	}
 
 	pos := FromFen(line[:endIndex])
-	wm := pos[len(pos)-1] == 768
+	// wm := pos[len(pos)-1] == 768
 
 	startIndex = endIndex + 7
 	endIndex = strings.Index(line, ";eval")
@@ -124,14 +124,14 @@ func ParseLine(line string) Data {
 		outcome = 1
 	}
 
-	if !wm {
-		score *= -1
-		if outcome == 2 {
-			outcome = 0
-		} else if outcome == 0 {
-			outcome = 2
-		}
-	}
+	// if !wm {
+	// 	score *= -1
+	// 	if outcome == 2 {
+	// 		outcome = 0
+	// 	} else if outcome == 0 {
+	// 		outcome = 2
+	// 	}
+	// }
 
 	return Data{
 		Input:   pos,
