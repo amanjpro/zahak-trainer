@@ -9,7 +9,6 @@ import (
 	"gonum.org/v1/gonum/stat/distuv"
 )
 
-// Network is a neural network with 3 layers
 type (
 	Topology struct {
 		Inputs        uint32
@@ -17,6 +16,7 @@ type (
 		HiddenNeurons []uint32
 	}
 
+	// Network is a neural network with 3 layers
 	Network struct {
 		Id          uint32
 		Topology    Topology

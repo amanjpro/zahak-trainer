@@ -24,7 +24,7 @@ type (
 )
 
 var (
-	SigmoidScale    float32 = 3.5 / 1024
+	SigmoidScale    float32 = 3.5 / 512
 	LearningRate    float32 = 0.01
 	NumberOfThreads         = runtime.NumCPU()
 	BatchSize               = 16384
