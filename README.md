@@ -51,27 +51,27 @@ architecture:
 $ ./zahak-trainer -help
 Usage of ./zahak-trainer:
   -epochs int
-      Number of epochs (default 100)
+    Number of epochs (default 100)
   -from-net string
-      Path to a network, to be used as a starting point
+    Path to a network, to be used as a starting point
   -hiddens string
-      Number of hidden neurons, for multi-layer you can send comma separated numbers (default "128")
+    Number of hidden neurons, for multi-layer you can send comma separated numbers (default "256")
   -input-path string
-      Path to input dataset (FENs), for multiple files send a comma separated set of files
+    Path to input dataset (FENs), for multiple files send a comma separated set of files
   -inputs int
-      Number of inputs (default 768)
+    Number of inputs (default 769)
   -lr float
-      Learning Rate (default 0.009999999776482582)
+    Learning Rate (default 0.009999999776482582)
   -network-id int
-      A unique id for the network (default 285061292)
+    A unique id for the network (default 1277010531)
   -output-path string
-      Final NNUE path directory
+    Final NNUE path directory
   -outputs int
-      Number of outputs (default 1)
+    Number of outputs (default 1)
   -profile
-      Profile the trainer
+    Profile the trainer
   -sigmoid-scale float
-      Sigmoid scale (default 0.00244140625)
+    Sigmoid scale (default 0.0068359375)
 ```
 
 
