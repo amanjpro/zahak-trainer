@@ -19,7 +19,7 @@ func TestParseLine(t *testing.T) {
 		632, 505, 570, 699, 764, 573, 510, 639,
 		432, 433, 434, 435, 436, 437, 438, 439,
 		8, 9, 10, 11, 12, 13, 14, 15,
-		192, 65, 130, 259, 324, 133, 70, 199,
+		192, 65, 130, 259, 324, 133, 70, 199, 768,
 	}
 	if !sameArray16(data.Input, expected) {
 		t.Errorf("Position is parsed wrong, expected %v, got %v", expected, data.Input)

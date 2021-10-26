@@ -17,8 +17,8 @@ import (
 
 var (
 	DefaultNumberOfEpochs        = 100
-	DefaultNumberOfInputs        = 768
-	DefaultNumberOfHiddenNeurons = "128"
+	DefaultNumberOfInputs        = 769
+	DefaultNumberOfHiddenNeurons = "256"
 	DefaultNumberOfOutputs       = 1
 )
 
