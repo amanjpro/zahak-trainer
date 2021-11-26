@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"os"
 	"runtime"
 	"time"
@@ -30,15 +29,7 @@ var (
 	BatchSize               = 16384
 )
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
-
 func NewTrainer(net Network, dataset []Data, epochs int) *Trainer {
-	for i := 0; i < len(dataset); i++ {
-		j := rand.Intn(len(dataset))
-		dataset[i], dataset[j] = dataset[j], dataset[i]
-	}
 	validationSize := min(20*len(dataset)/100, 5_000_000)
 	validation := (dataset)[:validationSize]
 	training := (dataset)[validationSize:]
@@ -46,6 +37,7 @@ func NewTrainer(net Network, dataset []Data, epochs int) *Trainer {
 	for i := 0; i < len(networks); i++ {
 		networks[i] = net.Copy()
 	}
+	fmt.Println("A new trainer is initialized")
 	return &Trainer{
 		Nets:            networks,
 		Training:        training,
@@ -60,13 +52,6 @@ func (t *Trainer) CopyNets() {
 	for i := 1; i < len(t.Nets); i++ {
 		t.Nets[i].Weights = t.Nets[0].Weights
 		t.Nets[i].Biases = t.Nets[0].Biases
-	}
-}
-
-func (t *Trainer) Shuffle() {
-	for i := 0; i < len(t.Training); i++ {
-		j := rand.Intn(len(t.Training))
-		t.Training[i], t.Training[j] = t.Training[j], t.Training[i]
 	}
 }
 
@@ -175,12 +160,7 @@ func (t *Trainer) Train(path string) {
 		for e := 0; e <= epoch; e++ {
 			fmt.Printf("%d\t\t\t\t%f\t\t\t\t%f\n", e+1, t.TrainingCosts[e], t.ValidationCosts[e])
 		}
-		// if (epoch+1)%20 == 0 {
-		// 	LearningRate /= 1.1
-		// }
 		fmt.Println("===================================================================================")
-		fmt.Println("Shuffling training dataset")
-		t.Shuffle()
 		runtime.GC()
 	}
 }

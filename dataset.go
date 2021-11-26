@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -46,6 +47,136 @@ func countSamples(paths []string) int64 {
 	fmt.Printf("Loading %d samples\n", totalCount)
 
 	return totalCount
+}
+
+func SaveDataset(paths string, file string) {
+	pathsArray := strings.Split(paths, ",")
+
+	f, err := os.Create(file)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	buf8 := make([]byte, 8)
+	samples := countSamples(pathsArray)
+	binary.LittleEndian.PutUint64(buf8, uint64(samples))
+	_, err = f.Write(buf8)
+	if err != nil {
+		panic(err)
+	}
+
+	var buf4 = make([]byte, 4)
+	for _, path := range pathsArray {
+		file, err := os.Open(path)
+		if err != nil {
+			panic(err)
+		}
+		defer file.Close()
+
+		reader := bufio.NewReader(file)
+		skipNext := false
+		for true {
+			buf, pre, err := reader.ReadLine()
+			if errors.Is(err, io.EOF) {
+				break
+			} else if err != nil {
+				panic(err)
+			}
+			if pre {
+				continue
+			} else if skipNext {
+				skipNext = false
+				continue
+			}
+			skipNext = pre
+			line := string(buf)
+			if line == "" {
+				break
+			}
+			sample := ParseLine(line)
+			binary.LittleEndian.PutUint16(buf4, uint16(sample.Outcome))
+			_, err = f.Write(buf4)
+			if err != nil {
+				panic(err)
+			}
+			binary.LittleEndian.PutUint16(buf4, uint16(sample.Score))
+			_, err = f.Write(buf4)
+			if err != nil {
+				panic(err)
+			}
+			binary.LittleEndian.PutUint16(buf4, uint16(len(sample.Input)))
+			_, err = f.Write(buf4)
+			if err != nil {
+				panic(err)
+			}
+			for _, i := range sample.Input {
+				binary.LittleEndian.PutUint16(buf4, uint16(i))
+				_, err = f.Write(buf4)
+				if err != nil {
+					panic(err)
+				}
+			}
+		}
+	}
+}
+
+func LoadBinpack(path string) []Data {
+	f, err := os.Open(path)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	buf8 := make([]byte, 8)
+	_, err = io.ReadFull(f, buf8)
+	if err != nil {
+		panic(err)
+	}
+
+	counter := int64(0)
+
+	var buf4 = make([]byte, 4)
+	data := make([]Data, binary.LittleEndian.Uint64(buf8))
+	for i := 0; i < len(data); i++ {
+		_, err = io.ReadFull(f, buf4)
+		if err != nil {
+			panic(err)
+		}
+		outcome := int8(binary.LittleEndian.Uint16(buf4))
+		_, err = io.ReadFull(f, buf4)
+		if err != nil {
+			panic(err)
+		}
+		score := int16(binary.LittleEndian.Uint16(buf4))
+		_, err = io.ReadFull(f, buf4)
+		if err != nil {
+			panic(err)
+		}
+		inputLength := binary.LittleEndian.Uint16(buf4)
+		input := make([]int16, inputLength)
+		for j := uint16(0); j < inputLength; j++ {
+			_, err = io.ReadFull(f, buf4)
+			if err != nil {
+				panic(err)
+			}
+			input[j] = int16(binary.LittleEndian.Uint16(buf4))
+		}
+
+		data[i] = Data{
+			Score:   score,
+			Outcome: outcome,
+			Input:   input,
+		}
+
+		if counter == 2000 {
+			fmt.Printf("%d of %d is loaded\r", i, len(data))
+			counter = 0
+		}
+		counter++
+	}
+
+	return data
 }
 
 func LoadDataset(paths string) []Data {

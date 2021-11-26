@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
-	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"runtime"
@@ -34,6 +33,8 @@ func main() {
 	epdPath := flag.String("input-path", "", "Path to input dataset (FENs), for multiple files send a comma separated set of files")
 	startNet := flag.String("from-net", "", "Path to a network, to be used as a starting point")
 	binPath := flag.String("output-path", "", "Final NNUE path directory")
+	storeBin := flag.String("output-binpack", "", "Path to store binpack representation")
+	readBinpack := flag.Bool("b", false, "Read input as a binpack")
 
 	flag.Parse()
 
@@ -75,11 +76,20 @@ func main() {
 	SigmoidScale = float32(*sigmoidScale)
 	LearningRate = float32(*learningRate)
 
-	go http.ListenAndServe("localhost:6060", nil)
-	dataset := LoadDataset(*epdPath)
-	trainer := NewTrainer(network, dataset, *epochs)
-	runtime.GC()
+	// go http.ListenAndServe("localhost:6060", nil)
+	if *storeBin != "" {
+		SaveDataset(*epdPath, *storeBin)
+	} else {
+		var dataset []Data
+		if *readBinpack {
+			dataset = LoadBinpack(*epdPath)
+		} else {
+			dataset = LoadDataset(*epdPath)
+		}
+		trainer := NewTrainer(network, dataset, *epochs)
+		runtime.GC()
 
-	trainer.Train(*binPath)
+		trainer.Train(*binPath)
+	}
 
 }
