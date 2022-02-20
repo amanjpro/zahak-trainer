@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	CostEvalWeight float32 = 0.5
+	CostEvalWeight float32 = 0.75
 	CostWDLWeight  float32 = 1.0 - CostEvalWeight
 )
 

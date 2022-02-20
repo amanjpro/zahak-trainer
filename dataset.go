@@ -83,13 +83,13 @@ func SaveDataset(paths string, file string) {
 			} else if err != nil {
 				panic(err)
 			}
+			skipNext = pre
 			if pre {
 				continue
 			} else if skipNext {
 				skipNext = false
 				continue
 			}
-			skipNext = pre
 			line := string(buf)
 			if line == "" {
 				break
